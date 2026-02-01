@@ -1,0 +1,40 @@
+{
+  "name": "@dreamer/upload",
+  "version": "1.0.0-beta.1",
+  "exports": {
+    ".": "./src/mod.ts",
+    "./adapters": "./src/adapters/mod.ts",
+    "./multipart": "./src/multipart.ts",
+    "./resumable": "./src/resumable.ts",
+    "./scanner": "./src/scanner.ts",
+    "./client": "./src/client/mod.ts",
+    "./server": "./src/server/mod.ts"
+  },
+  "imports": {
+    "@dreamer/test": "jsr:@dreamer/test@^1.0.0-beta.40",
+    "@dreamer/runtime-adapter": "jsr:@dreamer/runtime-adapter@^1.0.0-beta.22"
+  },
+  "tasks": {
+    "test": "deno test -A tests/",
+    "check": "deno check src/mod.ts",
+    "lint": "deno lint src/ tests/",
+    "fmt": "deno fmt src/ tests/"
+  },
+  "publish": {
+    "include": [
+      "src/**/*.ts",
+      "deno.json",
+      "README.md",
+      "LICENSE.md"
+    ],
+    "exclude": [
+      "tests/**",
+      "**/*.test.ts"
+    ]
+  },
+  "nodeModulesDir": "auto",
+  "compilerOptions": {
+    "strict": true,
+    "lib": ["esnext", "dom", "dom.iterable", "dom.asynciterable", "deno.ns", "deno.window"]
+  }
+}

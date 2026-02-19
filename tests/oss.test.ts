@@ -13,12 +13,7 @@
  * deno test -A tests/oss.test.ts
  */
 
-import {
-  describe,
-  it,
-  expect,
-  beforeAll,
-} from "@dreamer/test";
+import { beforeAll, describe, expect, it } from "@dreamer/test";
 import { createOSSAdapter } from "../src/adapters/oss.ts";
 
 // ============================================================================
@@ -240,7 +235,10 @@ describe("OSS 适配器测试（MinIO S3 兼容模式）", () => {
       // 上传分片
       const parts = [];
       for (let i = 0; i < 2; i++) {
-        const partData = TEST_LARGE_CONTENT.slice(i * partSize, (i + 1) * partSize);
+        const partData = TEST_LARGE_CONTENT.slice(
+          i * partSize,
+          (i + 1) * partSize,
+        );
         const result = await adapter.uploadPart(key, uploadId, i + 1, partData);
         parts.push({ partNumber: result.partNumber, etag: result.etag });
       }

@@ -1,0 +1,84 @@
+{
+  "upload": {
+    "fileNotFound": "File not found: {path}",
+    "s3": {
+      "deleteFailed": "S3 delete failed: {status} {statusText}",
+      "uploadFailed": "S3 upload failed: {status} {text}",
+      "downloadFailed": "S3 download failed: {status} {statusText}",
+      "getMetadataFailed": "S3 get metadata failed: {status}",
+      "listFailed": "S3 list failed: {status}",
+      "copyFailed": "S3 copy failed: {status}",
+      "initMultipartFailed": "S3 init multipart upload failed: {status} {text}",
+      "initMultipartNoUploadId": "S3 init multipart upload failed: UploadId not returned",
+      "uploadPartFailed": "S3 upload part failed: {status} {text}",
+      "completeMultipartFailed": "S3 complete multipart upload failed: {status} {text}",
+      "abortMultipartFailed": "S3 abort multipart upload failed: {status}",
+      "listPartsFailed": "S3 list parts failed: {status}"
+    },
+    "cos": {
+      "deleteFailed": "COS delete failed: {status} {statusText}",
+      "uploadFailed": "COS upload failed: {status} {text}",
+      "downloadFailed": "COS download failed: {status} {statusText}",
+      "getMetadataFailed": "COS get metadata failed: {status}",
+      "listFailed": "COS list failed: {status}",
+      "copyFailed": "COS copy failed: {status}",
+      "initMultipartFailed": "COS init multipart upload failed: {status} {text}",
+      "initMultipartNoUploadId": "COS init multipart upload failed: UploadId not returned",
+      "uploadPartFailed": "COS upload part failed: {status} {text}",
+      "completeMultipartFailed": "COS complete multipart upload failed: {status} {text}",
+      "abortMultipartFailed": "COS abort multipart upload failed: {status}",
+      "listPartsFailed": "COS list parts failed: {status}"
+    },
+    "oss": {
+      "deleteFailed": "OSS delete failed: {status} {statusText}",
+      "uploadFailed": "OSS upload failed: {status} {text}",
+      "downloadFailed": "OSS download failed: {status} {statusText}",
+      "getMetadataFailed": "OSS get metadata failed: {status}",
+      "listFailed": "OSS list failed: {status}",
+      "copyFailed": "OSS copy failed: {status}",
+      "initMultipartFailed": "OSS init multipart upload failed: {status} {text}",
+      "initMultipartNoUploadId": "OSS init multipart upload failed: UploadId not returned",
+      "uploadPartFailed": "OSS upload part failed: {status} {text}",
+      "completeMultipartFailed": "OSS complete multipart upload failed: {status} {text}",
+      "abortMultipartFailed": "OSS abort multipart upload failed: {status}",
+      "listPartsFailed": "OSS list parts failed: {status}"
+    },
+    "multipart": {
+      "partSizeTooSmall": "Part size cannot be less than {min}",
+      "partSizeTooLarge": "Part size cannot be greater than {max}",
+      "partsExceedLimit": "File too large: part count {count} exceeds limit {max}",
+      "partsUploadFailed": "{count} part(s) upload failed"
+    },
+    "storage": {
+      "s3ConfigMissing": "S3 config is missing",
+      "ossConfigMissing": "OSS config is missing",
+      "cosConfigMissing": "COS config is missing",
+      "localConfigMissing": "Local storage config is missing"
+    },
+    "server": {
+      "initMultipartFailed": "Init multipart upload failed: {message}",
+      "uploadPartFailed": "Upload part failed: {message}",
+      "completeMultipartFailed": "Complete multipart upload failed: {message}",
+      "abortMultipartFailed": "Abort multipart upload failed: {message}",
+      "queryUploadStatusFailed": "Query upload status failed: {message}"
+    },
+    "scanner": {
+      "virusTotalApiError": "VirusTotal API error: {status}",
+      "virusTotalUploadFailed": "VirusTotal upload failed: {status}",
+      "scanTimeout": "Scan timeout",
+      "atLeastOneScanner": "At least one scanner is required",
+      "noScannerAvailable": "No scanner available"
+    },
+    "client": {
+      "httpError": "HTTP {status}: {statusText}",
+      "uploadCancelled": "Upload cancelled",
+      "chunksUploadFailed": "{count} chunk(s) upload failed"
+    },
+    "resumable": {
+      "uploadCancelled": "Upload cancelled"
+    },
+    "utils": {
+      "fileTypeMismatch": "File type does not match extension"
+    }
+  }
+}

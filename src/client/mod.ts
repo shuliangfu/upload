@@ -19,6 +19,8 @@
  * ```
  */
 
+import { $tr } from "../i18n.ts";
+
 // ============================================================================
 // 类型定义
 // ============================================================================
@@ -220,7 +222,9 @@ async function calculateFileHash(file: Uint8Array | File): Promise<string> {
     if (file.size <= sampleSize * 2) {
       data = new Uint8Array(await file.arrayBuffer());
     } else {
-      const head = new Uint8Array(await file.slice(0, sampleSize).arrayBuffer());
+      const head = new Uint8Array(
+        await file.slice(0, sampleSize).arrayBuffer(),
+      );
       const tail = new Uint8Array(await file.slice(-sampleSize).arrayBuffer());
       data = new Uint8Array(sampleSize * 2 + 8);
       data.set(head, 0);
@@ -355,7 +359,10 @@ export class UploadClient {
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
+        const timeoutId = setTimeout(
+          () => controller.abort(),
+          this.config.timeout,
+        );
 
         const response = await fetch(url, {
           ...options,
@@ -366,7 +373,12 @@ export class UploadClient {
         clearTimeout(timeoutId);
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          throw new Error(
+            $tr("upload.client.httpError", {
+              status: String(response.status),
+              statusText: response.statusText,
+            }),
+          );
         }
 
         return await response.json() as T;
@@ -450,19 +462,22 @@ export class UploadClient {
     chunks: ChunkInfo[],
     _options?: UploadOptions,
   ): Promise<CompleteResponse> {
-    return await this.request<CompleteResponse>(`${this.config.endpoint}/complete`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        uploadId,
-        key,
-        chunks: chunks.map((c) => ({
-          index: c.index,
-          etag: c.etag,
-          size: c.size,
-        })),
-      }),
-    });
+    return await this.request<CompleteResponse>(
+      `${this.config.endpoint}/complete`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uploadId,
+          key,
+          chunks: chunks.map((c) => ({
+            index: c.index,
+            etag: c.etag,
+            size: c.size,
+          })),
+        }),
+      },
+    );
   }
 
   /**
@@ -638,7 +653,9 @@ export class UploadClient {
           loaded: completedSize,
           total: state.fileSize,
           percentage: Math.round((completedSize / state.fileSize) * 100),
-          completedChunks: state.chunks.filter((c) => c.status === "completed").length,
+          completedChunks: state.chunks.filter((c) =>
+            c.status === "completed"
+          ).length,
           totalChunks: state.chunks.length,
           speed,
           remainingTime: speed > 0 ? remaining / speed : 0,
@@ -652,7 +669,7 @@ export class UploadClient {
       );
 
       for (const chunk of pendingChunks) {
-        if (aborted) throw new Error("上传已取消");
+        if (aborted) throw new Error($tr("upload.client.uploadCancelled"));
 
         // 控制并发
         if (uploadQueue.length >= this.config.concurrency) {
@@ -694,7 +711,9 @@ export class UploadClient {
             options.onStateChange?.(state);
           } catch (error) {
             chunk.status = "failed";
-            chunk.error = error instanceof Error ? error.message : String(error);
+            chunk.error = error instanceof Error
+              ? error.message
+              : String(error);
             state.updatedAt = Date.now();
             this.saveState(state);
             options.onStateChange?.(state);
@@ -717,7 +736,11 @@ export class UploadClient {
       // 检查是否全部成功
       const failedChunks = state.chunks.filter((c) => c.status !== "completed");
       if (failedChunks.length > 0) {
-        throw new Error(`${failedChunks.length} 个分片上传失败`);
+        throw new Error(
+          $tr("upload.client.chunksUploadFailed", {
+            count: String(failedChunks.length),
+          }),
+        );
       }
 
       // 完成上传
@@ -977,4 +1000,4 @@ export function createUploadClient(config: UploadClientConfig): UploadClient {
 // 导出辅助函数
 // ============================================================================
 
-export { formatSize, calculateFileHash };
+export { calculateFileHash, formatSize };

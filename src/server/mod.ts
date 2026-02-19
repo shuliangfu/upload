@@ -25,7 +25,12 @@
  * ```
  */
 
-import type { CloudStorageAdapter, CloudUploadOptions, PartInfo } from "../adapters/types.ts";
+import type {
+  CloudStorageAdapter,
+  CloudUploadOptions,
+  PartInfo,
+} from "../adapters/types.ts";
+import { $tr } from "../i18n.ts";
 
 // ============================================================================
 // 类型定义
@@ -46,7 +51,10 @@ export interface MultipartUploadHandlerConfig {
   /** 上传路径前缀 */
   pathPrefix?: string;
   /** 自定义路径生成函数 */
-  generatePath?: (filename: string, metadata?: Record<string, unknown>) => string;
+  generatePath?: (
+    filename: string,
+    metadata?: Record<string, unknown>,
+  ) => string;
   /** 验证函数（返回 true 表示通过） */
   validate?: (
     filename: string,
@@ -191,12 +199,14 @@ export interface UploadStatus {
  * ```
  */
 export class MultipartUploadHandler {
-  private config: Required<
-    Omit<MultipartUploadHandlerConfig, "validate" | "generatePath">
-  > & {
-    validate?: MultipartUploadHandlerConfig["validate"];
-    generatePath?: MultipartUploadHandlerConfig["generatePath"];
-  };
+  private config:
+    & Required<
+      Omit<MultipartUploadHandlerConfig, "validate" | "generatePath">
+    >
+    & {
+      validate?: MultipartUploadHandlerConfig["validate"];
+      generatePath?: MultipartUploadHandlerConfig["generatePath"];
+    };
 
   /**
    * 创建服务端处理器
@@ -253,7 +263,9 @@ export class MultipartUploadHandler {
     const targetPath = path || "";
 
     // 生成唯一文件名
-    const ext = filename.includes(".") ? filename.substring(filename.lastIndexOf(".")) : "";
+    const ext = filename.includes(".")
+      ? filename.substring(filename.lastIndexOf("."))
+      : "";
     const uniqueName = `${crypto.randomUUID()}${ext}`;
 
     if (prefix && targetPath) {
@@ -293,7 +305,9 @@ export class MultipartUploadHandler {
       if (
         this.config.allowedMimeTypes.length > 0 &&
         body.mimeType &&
-        !this.config.allowedMimeTypes.some((t) => this.matchMimeType(body.mimeType!, t))
+        !this.config.allowedMimeTypes.some((t) =>
+          this.matchMimeType(body.mimeType!, t)
+        )
       ) {
         return this.errorResponse(`不支持的文件类型: ${body.mimeType}`);
       }
@@ -330,7 +344,10 @@ export class MultipartUploadHandler {
       }
 
       // 初始化分片上传
-      const result = await this.config.storage.initiateMultipartUpload(key, options);
+      const result = await this.config.storage.initiateMultipartUpload(
+        key,
+        options,
+      );
 
       const response: InitResponse = {
         uploadId: result.uploadId,
@@ -339,11 +356,9 @@ export class MultipartUploadHandler {
 
       return this.jsonResponse(response);
     } catch (error) {
-      console.error("初始化分片上传失败:", error);
-      return this.errorResponse(
-        error instanceof Error ? error.message : "初始化失败",
-        500,
-      );
+      const message = error instanceof Error ? error.message : String(error);
+      console.error($tr("upload.server.initMultipartFailed", { message }));
+      return this.errorResponse(message, 500);
     }
   }
 
@@ -401,11 +416,9 @@ export class MultipartUploadHandler {
 
       return this.jsonResponse(response);
     } catch (error) {
-      console.error("上传分片失败:", error);
-      return this.errorResponse(
-        error instanceof Error ? error.message : "上传分片失败",
-        500,
-      );
+      const message = error instanceof Error ? error.message : String(error);
+      console.error($tr("upload.server.uploadPartFailed", { message }));
+      return this.errorResponse(message, 500);
     }
   }
 
@@ -455,11 +468,9 @@ export class MultipartUploadHandler {
 
       return this.jsonResponse(response);
     } catch (error) {
-      console.error("完成分片上传失败:", error);
-      return this.errorResponse(
-        error instanceof Error ? error.message : "完成上传失败",
-        500,
-      );
+      const message = error instanceof Error ? error.message : String(error);
+      console.error($tr("upload.server.completeMultipartFailed", { message }));
+      return this.errorResponse(message, 500);
     }
   }
 
@@ -482,11 +493,9 @@ export class MultipartUploadHandler {
 
       return this.jsonResponse({ success: true });
     } catch (error) {
-      console.error("取消分片上传失败:", error);
-      return this.errorResponse(
-        error instanceof Error ? error.message : "取消上传失败",
-        500,
-      );
+      const message = error instanceof Error ? error.message : String(error);
+      console.error($tr("upload.server.abortMultipartFailed", { message }));
+      return this.errorResponse(message, 500);
     }
   }
 
@@ -518,11 +527,9 @@ export class MultipartUploadHandler {
 
       return this.jsonResponse(response);
     } catch (error) {
-      console.error("查询上传状态失败:", error);
-      return this.errorResponse(
-        error instanceof Error ? error.message : "查询状态失败",
-        500,
-      );
+      const message = error instanceof Error ? error.message : String(error);
+      console.error($tr("upload.server.queryUploadStatusFailed", { message }));
+      return this.errorResponse(message, 500);
     }
   }
 
@@ -533,7 +540,10 @@ export class MultipartUploadHandler {
    * @param basePath - 基础路径（默认 /upload）
    * @returns HTTP 响应
    */
-  handle(request: Request, basePath = "/upload"): Promise<Response | null> | null {
+  handle(
+    request: Request,
+    basePath = "/upload",
+  ): Promise<Response | null> | null {
     const url = new URL(request.url);
     const path = url.pathname;
 

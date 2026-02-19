@@ -21,6 +21,7 @@ import type {
   S3Config,
   UploadPartResult,
 } from "./types.ts";
+import { $tr } from "../i18n.ts";
 
 // ============================================================================
 // 辅助函数
@@ -366,7 +367,12 @@ export class S3StorageAdapter implements CloudStorageAdapter {
   async delete(path: string): Promise<void> {
     const response = await this.request("DELETE", path);
     if (!response.ok && response.status !== 404) {
-      throw new Error(`S3 删除失败: ${response.status} ${response.statusText}`);
+      throw new Error(
+        $tr("upload.s3.deleteFailed", {
+          status: String(response.status),
+          statusText: response.statusText,
+        }),
+      );
     }
   }
 
@@ -429,7 +435,12 @@ export class S3StorageAdapter implements CloudStorageAdapter {
     });
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`S3 上传失败: ${response.status} ${text}`);
+      throw new Error(
+        $tr("upload.s3.uploadFailed", {
+          status: String(response.status),
+          text,
+        }),
+      );
     }
   }
 
@@ -448,11 +459,16 @@ export class S3StorageAdapter implements CloudStorageAdapter {
     const response = await this.request("GET", path, { headers });
 
     if (response.status === 404) {
-      throw new Error(`文件不存在: ${path}`);
+      throw new Error($tr("upload.fileNotFound", { path }));
     }
 
     if (!response.ok && response.status !== 206) {
-      throw new Error(`S3 下载失败: ${response.status} ${response.statusText}`);
+      throw new Error(
+        $tr("upload.s3.downloadFailed", {
+          status: String(response.status),
+          statusText: response.statusText,
+        }),
+      );
     }
 
     return new Uint8Array(await response.arrayBuffer());
@@ -469,7 +485,9 @@ export class S3StorageAdapter implements CloudStorageAdapter {
     }
 
     if (!response.ok) {
-      throw new Error(`S3 获取元数据失败: ${response.status}`);
+      throw new Error(
+        $tr("upload.s3.getMetadataFailed", { status: String(response.status) }),
+      );
     }
 
     const metadata: Record<string, string> = {};
@@ -518,7 +536,9 @@ export class S3StorageAdapter implements CloudStorageAdapter {
     const response = await this.request("GET", "", { queryParams });
 
     if (!response.ok) {
-      throw new Error(`S3 列表失败: ${response.status}`);
+      throw new Error(
+        $tr("upload.s3.listFailed", { status: String(response.status) }),
+      );
     }
 
     const text = await response.text();
@@ -598,7 +618,9 @@ export class S3StorageAdapter implements CloudStorageAdapter {
     const response = await this.request("PUT", destPath, { headers });
 
     if (!response.ok) {
-      throw new Error(`S3 复制失败: ${response.status}`);
+      throw new Error(
+        $tr("upload.s3.copyFailed", { status: String(response.status) }),
+      );
     }
   }
 
@@ -719,14 +741,19 @@ export class S3StorageAdapter implements CloudStorageAdapter {
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`S3 初始化分片上传失败: ${response.status} ${text}`);
+      throw new Error(
+        $tr("upload.s3.initMultipartFailed", {
+          status: String(response.status),
+          text,
+        }),
+      );
     }
 
     const text = await response.text();
     const uploadId = text.match(/<UploadId>(.*?)<\/UploadId>/)?.[1];
 
     if (!uploadId) {
-      throw new Error("S3 初始化分片上传失败: 未获取到 UploadId");
+      throw new Error($tr("upload.s3.initMultipartNoUploadId"));
     }
 
     return { uploadId, key };
@@ -760,7 +787,12 @@ export class S3StorageAdapter implements CloudStorageAdapter {
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`S3 上传分片失败: ${response.status} ${text}`);
+      throw new Error(
+        $tr("upload.s3.uploadPartFailed", {
+          status: String(response.status),
+          text,
+        }),
+      );
     }
 
     const etag = response.headers.get("ETag")?.replace(/"/g, "") || "";
@@ -805,7 +837,12 @@ export class S3StorageAdapter implements CloudStorageAdapter {
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`S3 完成分片上传失败: ${response.status} ${text}`);
+      throw new Error(
+        $tr("upload.s3.completeMultipartFailed", {
+          status: String(response.status),
+          text,
+        }),
+      );
     }
   }
 
@@ -821,7 +858,11 @@ export class S3StorageAdapter implements CloudStorageAdapter {
     });
 
     if (!response.ok && response.status !== 404) {
-      throw new Error(`S3 取消分片上传失败: ${response.status}`);
+      throw new Error(
+        $tr("upload.s3.abortMultipartFailed", {
+          status: String(response.status),
+        }),
+      );
     }
   }
 
@@ -838,7 +879,9 @@ export class S3StorageAdapter implements CloudStorageAdapter {
     });
 
     if (!response.ok) {
-      throw new Error(`S3 列出分片失败: ${response.status}`);
+      throw new Error(
+        $tr("upload.s3.listPartsFailed", { status: String(response.status) }),
+      );
     }
 
     const text = await response.text();

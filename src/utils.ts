@@ -5,7 +5,11 @@
  */
 
 import { DEFAULT_FORBIDDEN_EXTENSIONS, MIME_TYPES } from "./constants.ts";
-import type { FileValidationInput, FileValidationOptions, FileValidationResult } from "./types.ts";
+import type {
+  FileValidationInput,
+  FileValidationOptions,
+  FileValidationResult,
+} from "./types.ts";
 
 // ============================================================================
 // 文件名处理
@@ -46,7 +50,9 @@ export function getBaseName(filename: string): string {
  * @returns MIME 类型
  */
 export function getMimeType(filename: string): string {
-  const ext = filename.startsWith(".") ? filename.toLowerCase() : getFileExtension(filename);
+  const ext = filename.startsWith(".")
+    ? filename.toLowerCase()
+    : getFileExtension(filename);
   return MIME_TYPES[ext] || "application/octet-stream";
 }
 
@@ -148,7 +154,8 @@ export function validateFile(
   const ext = getFileExtension(filename);
 
   // 检查禁止的扩展名
-  const forbiddenExts = options.forbiddenExtensions || DEFAULT_FORBIDDEN_EXTENSIONS;
+  const forbiddenExts = options.forbiddenExtensions ||
+    DEFAULT_FORBIDDEN_EXTENSIONS;
   if (forbiddenExts.includes(ext)) {
     return { valid: false, error: `禁止上传 ${ext} 类型的文件` };
   }
@@ -242,32 +249,110 @@ const MAGIC_BYTES: Array<{
   offset?: number;
 }> = [
   // 图片
-  { mimeType: "image/jpeg", extensions: [".jpg", ".jpeg"], signature: [0xFF, 0xD8, 0xFF] },
-  { mimeType: "image/png", extensions: [".png"], signature: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] },
-  { mimeType: "image/gif", extensions: [".gif"], signature: [0x47, 0x49, 0x46, 0x38] },
-  { mimeType: "image/webp", extensions: [".webp"], signature: [0x52, 0x49, 0x46, 0x46] }, // RIFF
+  {
+    mimeType: "image/jpeg",
+    extensions: [".jpg", ".jpeg"],
+    signature: [0xFF, 0xD8, 0xFF],
+  },
+  {
+    mimeType: "image/png",
+    extensions: [".png"],
+    signature: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A],
+  },
+  {
+    mimeType: "image/gif",
+    extensions: [".gif"],
+    signature: [0x47, 0x49, 0x46, 0x38],
+  },
+  {
+    mimeType: "image/webp",
+    extensions: [".webp"],
+    signature: [0x52, 0x49, 0x46, 0x46],
+  }, // RIFF
   { mimeType: "image/bmp", extensions: [".bmp"], signature: [0x42, 0x4D] },
-  { mimeType: "image/tiff", extensions: [".tiff", ".tif"], signature: [0x49, 0x49, 0x2A, 0x00] },
-  { mimeType: "image/svg+xml", extensions: [".svg"], signature: [0x3C, 0x3F, 0x78, 0x6D, 0x6C] }, // <?xml
-  { mimeType: "image/x-icon", extensions: [".ico"], signature: [0x00, 0x00, 0x01, 0x00] },
+  {
+    mimeType: "image/tiff",
+    extensions: [".tiff", ".tif"],
+    signature: [0x49, 0x49, 0x2A, 0x00],
+  },
+  {
+    mimeType: "image/svg+xml",
+    extensions: [".svg"],
+    signature: [0x3C, 0x3F, 0x78, 0x6D, 0x6C],
+  }, // <?xml
+  {
+    mimeType: "image/x-icon",
+    extensions: [".ico"],
+    signature: [0x00, 0x00, 0x01, 0x00],
+  },
   // 压缩文件
-  { mimeType: "application/zip", extensions: [".zip"], signature: [0x50, 0x4B, 0x03, 0x04] },
-  { mimeType: "application/gzip", extensions: [".gz"], signature: [0x1F, 0x8B] },
-  { mimeType: "application/x-rar-compressed", extensions: [".rar"], signature: [0x52, 0x61, 0x72, 0x21] },
-  { mimeType: "application/x-7z-compressed", extensions: [".7z"], signature: [0x37, 0x7A, 0xBC, 0xAF] },
-  { mimeType: "application/x-tar", extensions: [".tar"], signature: [0x75, 0x73, 0x74, 0x61, 0x72], offset: 257 },
+  {
+    mimeType: "application/zip",
+    extensions: [".zip"],
+    signature: [0x50, 0x4B, 0x03, 0x04],
+  },
+  {
+    mimeType: "application/gzip",
+    extensions: [".gz"],
+    signature: [0x1F, 0x8B],
+  },
+  {
+    mimeType: "application/x-rar-compressed",
+    extensions: [".rar"],
+    signature: [0x52, 0x61, 0x72, 0x21],
+  },
+  {
+    mimeType: "application/x-7z-compressed",
+    extensions: [".7z"],
+    signature: [0x37, 0x7A, 0xBC, 0xAF],
+  },
+  {
+    mimeType: "application/x-tar",
+    extensions: [".tar"],
+    signature: [0x75, 0x73, 0x74, 0x61, 0x72],
+    offset: 257,
+  },
   // 文档
-  { mimeType: "application/pdf", extensions: [".pdf"], signature: [0x25, 0x50, 0x44, 0x46] }, // %PDF
+  {
+    mimeType: "application/pdf",
+    extensions: [".pdf"],
+    signature: [0x25, 0x50, 0x44, 0x46],
+  }, // %PDF
   // 可执行文件（危险）
-  { mimeType: "application/x-executable", extensions: [".exe"], signature: [0x4D, 0x5A] }, // MZ
-  { mimeType: "application/x-mach-binary", extensions: [".macho"], signature: [0xCF, 0xFA, 0xED, 0xFE] },
+  {
+    mimeType: "application/x-executable",
+    extensions: [".exe"],
+    signature: [0x4D, 0x5A],
+  }, // MZ
+  {
+    mimeType: "application/x-mach-binary",
+    extensions: [".macho"],
+    signature: [0xCF, 0xFA, 0xED, 0xFE],
+  },
   // 视频
-  { mimeType: "video/mp4", extensions: [".mp4"], signature: [0x00, 0x00, 0x00], offset: 4 }, // ftyp at offset 4
-  { mimeType: "video/webm", extensions: [".webm"], signature: [0x1A, 0x45, 0xDF, 0xA3] },
+  {
+    mimeType: "video/mp4",
+    extensions: [".mp4"],
+    signature: [0x00, 0x00, 0x00],
+    offset: 4,
+  }, // ftyp at offset 4
+  {
+    mimeType: "video/webm",
+    extensions: [".webm"],
+    signature: [0x1A, 0x45, 0xDF, 0xA3],
+  },
   // 音频
   { mimeType: "audio/mpeg", extensions: [".mp3"], signature: [0xFF, 0xFB] },
-  { mimeType: "audio/wav", extensions: [".wav"], signature: [0x52, 0x49, 0x46, 0x46] }, // RIFF
-  { mimeType: "audio/ogg", extensions: [".ogg"], signature: [0x4F, 0x67, 0x67, 0x53] },
+  {
+    mimeType: "audio/wav",
+    extensions: [".wav"],
+    signature: [0x52, 0x49, 0x46, 0x46],
+  }, // RIFF
+  {
+    mimeType: "audio/ogg",
+    extensions: [".ogg"],
+    signature: [0x4F, 0x67, 0x67, 0x53],
+  },
 ];
 
 /**
@@ -313,7 +398,7 @@ export function detectMimeType(content: Uint8Array): string | null {
  */
 export function validateMimeType(
   content: Uint8Array,
-  declaredMimeType: string
+  declaredMimeType: string,
 ): { valid: boolean; detected?: string; error?: string } {
   const detected = detectMimeType(content);
 
@@ -367,7 +452,8 @@ export function formatFileSize(bytes: number, decimals = 2): string {
   const sizes = ["Bytes", "KB", "MB", "GB", "TB", "PB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(decimals)) + " " + sizes[i];
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(decimals)) + " " +
+    sizes[i];
 }
 
 /**
@@ -452,7 +538,9 @@ export function isPathSafe(path: string, basePath: string): boolean {
 
   // 5. 检查 URL 编码的遍历尝试
   const decoded = decodeURIComponent(path);
-  if (decoded.includes("..") || decoded !== path.replace(/%[0-9A-Fa-f]{2}/g, "X")) {
+  if (
+    decoded.includes("..") || decoded !== path.replace(/%[0-9A-Fa-f]{2}/g, "X")
+  ) {
     // 如果解码后包含 .. 或解码后与原始不同（可能是编码攻击）
     if (decoded.includes("..")) return false;
   }

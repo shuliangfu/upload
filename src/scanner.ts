@@ -24,6 +24,8 @@
  * ```
  */
 
+import { $tr } from "./i18n.ts";
+
 // ============================================================================
 // 类型定义
 // ============================================================================
@@ -355,11 +357,14 @@ export class VirusTotalScanner implements VirusScannerInterface {
    */
   async isAvailable(): Promise<boolean> {
     try {
-      const response = await fetch("https://www.virustotal.com/api/v3/users/current", {
-        headers: {
-          "x-apikey": this.config.apiKey,
+      const response = await fetch(
+        "https://www.virustotal.com/api/v3/users/current",
+        {
+          headers: {
+            "x-apikey": this.config.apiKey,
+          },
         },
-      });
+      );
       return response.ok;
     } catch {
       return false;
@@ -431,7 +436,11 @@ export class VirusTotalScanner implements VirusScannerInterface {
     }
 
     if (!response.ok) {
-      throw new Error(`VirusTotal API 错误: ${response.status}`);
+      throw new Error(
+        $tr("upload.scanner.virusTotalApiError", {
+          status: String(response.status),
+        }),
+      );
     }
 
     const data = await response.json();
@@ -441,7 +450,10 @@ export class VirusTotalScanner implements VirusScannerInterface {
   /**
    * 上传文件进行扫描
    */
-  private async uploadFile(content: Uint8Array, filename?: string): Promise<string> {
+  private async uploadFile(
+    content: Uint8Array,
+    filename?: string,
+  ): Promise<string> {
     const formData = new FormData();
     const blob = new Blob([content.slice()]);
     formData.append("file", blob, filename || "file");
@@ -455,7 +467,11 @@ export class VirusTotalScanner implements VirusScannerInterface {
     });
 
     if (!response.ok) {
-      throw new Error(`VirusTotal 上传失败: ${response.status}`);
+      throw new Error(
+        $tr("upload.scanner.virusTotalUploadFailed", {
+          status: String(response.status),
+        }),
+      );
     }
 
     const data = await response.json();
@@ -479,7 +495,11 @@ export class VirusTotalScanner implements VirusScannerInterface {
       );
 
       if (!response.ok) {
-        throw new Error(`VirusTotal API 错误: ${response.status}`);
+        throw new Error(
+          $tr("upload.scanner.virusTotalApiError", {
+            status: String(response.status),
+          }),
+        );
       }
 
       const data = await response.json();
@@ -490,20 +510,23 @@ export class VirusTotalScanner implements VirusScannerInterface {
       }
 
       // 等待后重试
-      await new Promise((resolve) => setTimeout(resolve, this.config.pollInterval));
+      await new Promise((resolve) =>
+        setTimeout(resolve, this.config.pollInterval)
+      );
     }
 
-    throw new Error("扫描超时");
+    throw new Error($tr("upload.scanner.scanTimeout"));
   }
 
   /**
    * 解析分析结果
    */
   private parseAnalysisResult(data: Record<string, unknown>): ScanResult {
-    const attributes = (data.data as Record<string, unknown>)?.attributes as Record<
-      string,
-      unknown
-    >;
+    const attributes = (data.data as Record<string, unknown>)
+      ?.attributes as Record<
+        string,
+        unknown
+      >;
     const stats = attributes?.last_analysis_stats as Record<string, number>;
     const results = attributes?.last_analysis_results as Record<
       string,
@@ -515,7 +538,9 @@ export class VirusTotalScanner implements VirusScannerInterface {
     // 收集检测到的威胁
     if (results) {
       for (const [engine, result] of Object.entries(results)) {
-        if (result.category === "malicious" || result.category === "suspicious") {
+        if (
+          result.category === "malicious" || result.category === "suspicious"
+        ) {
           const threat = result.result as string;
           if (threat) {
             threats.push(`${engine}: ${threat}`);
@@ -572,7 +597,7 @@ export class MultiScanner implements VirusScannerInterface {
    */
   constructor(config: MultiScannerConfig) {
     if (config.scanners.length === 0) {
-      throw new Error("至少需要一个扫描器");
+      throw new Error($tr("upload.scanner.atLeastOneScanner"));
     }
 
     this.config = {
@@ -613,7 +638,7 @@ export class MultiScanner implements VirusScannerInterface {
     }
 
     if (availableScanners.length === 0) {
-      throw new Error("没有可用的扫描器");
+      throw new Error($tr("upload.scanner.noScannerAvailable"));
     }
 
     let safe = true;
@@ -845,7 +870,9 @@ export function createClamAVScanner(config: ClamAVConfig): ClamAVScanner {
  * @param config - VirusTotal 配置
  * @returns VirusTotal 扫描器实例
  */
-export function createVirusTotalScanner(config: VirusTotalConfig): VirusTotalScanner {
+export function createVirusTotalScanner(
+  config: VirusTotalConfig,
+): VirusTotalScanner {
   return new VirusTotalScanner(config);
 }
 

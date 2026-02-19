@@ -13,12 +13,7 @@
  * deno test -A tests/s3.test.ts
  */
 
-import {
-  describe,
-  it,
-  expect,
-  beforeAll,
-} from "@dreamer/test";
+import { beforeAll, describe, expect, it } from "@dreamer/test";
 import { createS3Adapter } from "../src/adapters/s3.ts";
 
 // ============================================================================

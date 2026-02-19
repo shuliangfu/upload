@@ -26,7 +26,11 @@
  * ```
  */
 
-import type { CloudStorageAdapter, CloudUploadOptions } from "./adapters/types.ts";
+import type {
+  CloudStorageAdapter,
+  CloudUploadOptions,
+} from "./adapters/types.ts";
+import { $tr } from "./i18n.ts";
 import { formatFileSize } from "./utils.ts";
 
 // ============================================================================
@@ -209,10 +213,18 @@ export class MultipartUploader {
 
     // 验证分片大小
     if (partSize < MIN_PART_SIZE) {
-      throw new Error(`分片大小不能小于 ${formatFileSize(MIN_PART_SIZE)}`);
+      throw new Error(
+        $tr("upload.multipart.partSizeTooSmall", {
+          min: formatFileSize(MIN_PART_SIZE),
+        }),
+      );
     }
     if (partSize > MAX_PART_SIZE) {
-      throw new Error(`分片大小不能大于 ${formatFileSize(MAX_PART_SIZE)}`);
+      throw new Error(
+        $tr("upload.multipart.partSizeTooLarge", {
+          max: formatFileSize(MAX_PART_SIZE),
+        }),
+      );
     }
 
     this.config = {
@@ -255,7 +267,10 @@ export class MultipartUploader {
     // 检查分片数量限制
     if (parts.length > MAX_PARTS) {
       throw new Error(
-        `文件过大，分片数量 ${parts.length} 超过最大限制 ${MAX_PARTS}`,
+        $tr("upload.multipart.partsExceedLimit", {
+          count: String(parts.length),
+          max: String(MAX_PARTS),
+        }),
       );
     }
 
@@ -320,7 +335,12 @@ export class MultipartUploader {
     data: Uint8Array,
   ): Promise<string> {
     // 使用云存储的原生分片上传 API
-    const result = await storage.uploadPart(key, uploadId, part.partNumber, data);
+    const result = await storage.uploadPart(
+      key,
+      uploadId,
+      part.partNumber,
+      data,
+    );
     return result.etag;
   }
 
@@ -401,7 +421,9 @@ export class MultipartUploader {
           loaded: completedSize,
           total: file.length,
           percentage: Math.round((completedSize / file.length) * 100),
-          completedParts: state.parts.filter((p) => p.status === "completed").length,
+          completedParts: state.parts.filter((p) =>
+            p.status === "completed"
+          ).length,
           totalParts: state.parts.length,
           speed,
           remainingTime,
@@ -462,7 +484,11 @@ export class MultipartUploader {
       // 检查是否所有分片都上传成功
       const failedParts = state.parts.filter((p) => p.status !== "completed");
       if (failedParts.length > 0) {
-        throw new Error(`${failedParts.length} 个分片上传失败`);
+        throw new Error(
+          $tr("upload.multipart.partsUploadFailed", {
+            count: String(failedParts.length),
+          }),
+        );
       }
 
       // 合并分片（简化实现）
@@ -524,7 +550,10 @@ export class MultipartUploader {
    * @param storage - 存储适配器
    * @param state - 上传状态
    */
-  async abort(storage: CloudStorageAdapter, state: MultipartUploadState): Promise<void> {
+  async abort(
+    storage: CloudStorageAdapter,
+    state: MultipartUploadState,
+  ): Promise<void> {
     try {
       // 使用云存储的原生 API 取消分片上传
       await storage.abortMultipartUpload(state.key, state.uploadId);

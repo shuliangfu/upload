@@ -7,15 +7,10 @@
  * deno test -A tests/server.test.ts
  */
 
+import { beforeAll, describe, expect, it } from "@dreamer/test";
 import {
-  describe,
-  it,
-  expect,
-  beforeAll,
-} from "@dreamer/test";
-import {
-  MultipartUploadHandler,
   createMultipartUploadHandler,
+  MultipartUploadHandler,
 } from "../src/server/mod.ts";
 import { createS3Adapter } from "../src/adapters/s3.ts";
 
@@ -48,9 +43,12 @@ let minioAvailable = false;
  */
 async function checkMinioAvailable(): Promise<boolean> {
   try {
-    const response = await fetch(`${TEST_S3_CONFIG.endpoint}/minio/health/live`, {
-      signal: AbortSignal.timeout(3000),
-    });
+    const response = await fetch(
+      `${TEST_S3_CONFIG.endpoint}/minio/health/live`,
+      {
+        signal: AbortSignal.timeout(3000),
+      },
+    );
     // 消费响应体以避免资源泄漏
     await response.text();
     return response.ok;

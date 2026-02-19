@@ -171,7 +171,9 @@ export class Uploader {
         success: false,
         files: [],
         count: 0,
-        error: `总文件大小超过限制，最大允许 ${formatFileSize(this.config.maxTotalSize)}`,
+        error: `总文件大小超过限制，最大允许 ${
+          formatFileSize(this.config.maxTotalSize)
+        }`,
         totalSize,
       };
     }

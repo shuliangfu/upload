@@ -22,6 +22,7 @@ import type {
   PresignedUrlOptions,
   UploadPartResult,
 } from "./types.ts";
+import { $tr } from "../i18n.ts";
 
 // ============================================================================
 // 辅助函数
@@ -330,7 +331,10 @@ export class COSStorageAdapter implements CloudStorageAdapter {
     const response = await this.request("DELETE", path);
     if (!response.ok && response.status !== 404) {
       throw new Error(
-        `COS 删除失败: ${response.status} ${response.statusText}`,
+        $tr("upload.cos.deleteFailed", {
+          status: String(response.status),
+          statusText: response.statusText,
+        }),
       );
     }
   }
@@ -381,7 +385,12 @@ export class COSStorageAdapter implements CloudStorageAdapter {
     });
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`COS 上传失败: ${response.status} ${text}`);
+      throw new Error(
+        $tr("upload.cos.uploadFailed", {
+          status: String(response.status),
+          text,
+        }),
+      );
     }
   }
 
@@ -397,12 +406,15 @@ export class COSStorageAdapter implements CloudStorageAdapter {
     const response = await this.request("GET", path, { headers });
 
     if (response.status === 404) {
-      throw new Error(`文件不存在: ${path}`);
+      throw new Error($tr("upload.fileNotFound", { path }));
     }
 
     if (!response.ok && response.status !== 206) {
       throw new Error(
-        `COS 下载失败: ${response.status} ${response.statusText}`,
+        $tr("upload.cos.downloadFailed", {
+          status: String(response.status),
+          statusText: response.statusText,
+        }),
       );
     }
 
@@ -417,7 +429,11 @@ export class COSStorageAdapter implements CloudStorageAdapter {
     }
 
     if (!response.ok) {
-      throw new Error(`COS 获取元数据失败: ${response.status}`);
+      throw new Error(
+        $tr("upload.cos.getMetadataFailed", {
+          status: String(response.status),
+        }),
+      );
     }
 
     const metadata: Record<string, string> = {};
@@ -453,7 +469,9 @@ export class COSStorageAdapter implements CloudStorageAdapter {
     const response = await this.request("GET", "", { queryParams });
 
     if (!response.ok) {
-      throw new Error(`COS 列表失败: ${response.status}`);
+      throw new Error(
+        $tr("upload.cos.listFailed", { status: String(response.status) }),
+      );
     }
 
     const text = await response.text();
@@ -512,7 +530,9 @@ export class COSStorageAdapter implements CloudStorageAdapter {
 
     const response = await this.request("PUT", destPath, { headers });
     if (!response.ok) {
-      throw new Error(`COS 复制失败: ${response.status}`);
+      throw new Error(
+        $tr("upload.cos.copyFailed", { status: String(response.status) }),
+      );
     }
   }
 
@@ -587,14 +607,19 @@ export class COSStorageAdapter implements CloudStorageAdapter {
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`COS 初始化分片上传失败: ${response.status} ${text}`);
+      throw new Error(
+        $tr("upload.cos.initMultipartFailed", {
+          status: String(response.status),
+          text,
+        }),
+      );
     }
 
     const text = await response.text();
     const uploadId = text.match(/<UploadId>(.*?)<\/UploadId>/)?.[1];
 
     if (!uploadId) {
-      throw new Error("COS 初始化分片上传失败: 未获取到 UploadId");
+      throw new Error($tr("upload.cos.initMultipartNoUploadId"));
     }
 
     return { uploadId, key };
@@ -622,7 +647,12 @@ export class COSStorageAdapter implements CloudStorageAdapter {
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`COS 上传分片失败: ${response.status} ${text}`);
+      throw new Error(
+        $tr("upload.cos.uploadPartFailed", {
+          status: String(response.status),
+          text,
+        }),
+      );
     }
 
     const etag = response.headers.get("ETag")?.replace(/"/g, "") || "";
@@ -661,7 +691,12 @@ export class COSStorageAdapter implements CloudStorageAdapter {
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`COS 完成分片上传失败: ${response.status} ${text}`);
+      throw new Error(
+        $tr("upload.cos.completeMultipartFailed", {
+          status: String(response.status),
+          text,
+        }),
+      );
     }
   }
 
@@ -674,7 +709,11 @@ export class COSStorageAdapter implements CloudStorageAdapter {
     });
 
     if (!response.ok && response.status !== 404) {
-      throw new Error(`COS 取消分片上传失败: ${response.status}`);
+      throw new Error(
+        $tr("upload.cos.abortMultipartFailed", {
+          status: String(response.status),
+        }),
+      );
     }
   }
 
@@ -687,7 +726,9 @@ export class COSStorageAdapter implements CloudStorageAdapter {
     });
 
     if (!response.ok) {
-      throw new Error(`COS 列出分片失败: ${response.status}`);
+      throw new Error(
+        $tr("upload.cos.listPartsFailed", { status: String(response.status) }),
+      );
     }
 
     const text = await response.text();

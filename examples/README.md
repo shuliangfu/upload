@@ -1,6 +1,6 @@
 # @dreamer/upload 示例
 
-本目录包含 `@dreamer/upload` 库的使用示例。
+本目录包含 `@dreamer/upload` 包的使用示例。
 
 ## 示例列表
 

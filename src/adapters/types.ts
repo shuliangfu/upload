@@ -238,7 +238,11 @@ export interface CloudStorageAdapter extends FileStorage {
    * @param destPath - 目标对象路径
    * @param options - 复制选项
    */
-  copy(sourcePath: string, destPath: string, options?: CopyOptions): Promise<void>;
+  copy(
+    sourcePath: string,
+    destPath: string,
+    options?: CopyOptions,
+  ): Promise<void>;
 
   /**
    * 生成预签名 URL

@@ -22,6 +22,7 @@ import type {
   UploadPartResult,
 } from "./types.ts";
 import { S3Signer } from "./s3-signature.ts";
+import { $tr } from "../i18n.ts";
 
 // ============================================================================
 // 辅助函数
@@ -34,7 +35,10 @@ import { S3Signer } from "./s3-signature.ts";
  * @param data - 数据
  * @returns HMAC 签名
  */
-async function hmacSha1(key: Uint8Array, data: Uint8Array): Promise<Uint8Array> {
+async function hmacSha1(
+  key: Uint8Array,
+  data: Uint8Array,
+): Promise<Uint8Array> {
   const cryptoKey = await crypto.subtle.importKey(
     "raw",
     key.slice(),
@@ -211,8 +215,12 @@ export class OSSStorageAdapter implements CloudStorageAdapter {
     let canonicalizedResource = `/${this.config.bucket}/${key}`;
     if (queryParams) {
       const subResources = [
-        "acl", "uploadId", "partNumber", "uploads",
-        "response-content-type", "response-content-disposition",
+        "acl",
+        "uploadId",
+        "partNumber",
+        "uploads",
+        "response-content-type",
+        "response-content-disposition",
       ];
       const resourceParams: string[] = [];
       for (const [k, v] of Object.entries(queryParams)) {
@@ -301,7 +309,12 @@ export class OSSStorageAdapter implements CloudStorageAdapter {
   async delete(path: string): Promise<void> {
     const response = await this.request("DELETE", path);
     if (!response.ok && response.status !== 404) {
-      throw new Error(`OSS 删除失败: ${response.status} ${response.statusText}`);
+      throw new Error(
+        $tr("upload.oss.deleteFailed", {
+          status: String(response.status),
+          statusText: response.statusText,
+        }),
+      );
     }
   }
 
@@ -345,10 +358,18 @@ export class OSSStorageAdapter implements CloudStorageAdapter {
       }
     }
 
-    const response = await this.request("PUT", path, { headers, body: content });
+    const response = await this.request("PUT", path, {
+      headers,
+      body: content,
+    });
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`OSS 上传失败: ${response.status} ${text}`);
+      throw new Error(
+        $tr("upload.oss.uploadFailed", {
+          status: String(response.status),
+          text,
+        }),
+      );
     }
   }
 
@@ -364,11 +385,16 @@ export class OSSStorageAdapter implements CloudStorageAdapter {
     const response = await this.request("GET", path, { headers });
 
     if (response.status === 404) {
-      throw new Error(`文件不存在: ${path}`);
+      throw new Error($tr("upload.fileNotFound", { path }));
     }
 
     if (!response.ok && response.status !== 206) {
-      throw new Error(`OSS 下载失败: ${response.status} ${response.statusText}`);
+      throw new Error(
+        $tr("upload.oss.downloadFailed", {
+          status: String(response.status),
+          statusText: response.statusText,
+        }),
+      );
     }
 
     return new Uint8Array(await response.arrayBuffer());
@@ -382,7 +408,11 @@ export class OSSStorageAdapter implements CloudStorageAdapter {
     }
 
     if (!response.ok) {
-      throw new Error(`OSS 获取元数据失败: ${response.status}`);
+      throw new Error(
+        $tr("upload.oss.getMetadataFailed", {
+          status: String(response.status),
+        }),
+      );
     }
 
     const metadata: Record<string, string> = {};
@@ -394,7 +424,10 @@ export class OSSStorageAdapter implements CloudStorageAdapter {
 
     return {
       contentType: response.headers.get("Content-Type") || undefined,
-      contentLength: parseInt(response.headers.get("Content-Length") || "0", 10),
+      contentLength: parseInt(
+        response.headers.get("Content-Length") || "0",
+        10,
+      ),
       etag: response.headers.get("ETag")?.replace(/"/g, "") || undefined,
       lastModified: response.headers.get("Last-Modified")
         ? new Date(response.headers.get("Last-Modified")!)
@@ -415,7 +448,9 @@ export class OSSStorageAdapter implements CloudStorageAdapter {
     const response = await this.request("GET", "", { queryParams });
 
     if (!response.ok) {
-      throw new Error(`OSS 列表失败: ${response.status}`);
+      throw new Error(
+        $tr("upload.oss.listFailed", { status: String(response.status) }),
+      );
     }
 
     const text = await response.text();
@@ -425,9 +460,16 @@ export class OSSStorageAdapter implements CloudStorageAdapter {
     for (const match of contentMatches) {
       const content = match[1];
       const key = content.match(/<Key>(.*?)<\/Key>/)?.[1] || "";
-      const size = parseInt(content.match(/<Size>(.*?)<\/Size>/)?.[1] || "0", 10);
-      const lastModified = content.match(/<LastModified>(.*?)<\/LastModified>/)?.[1];
-      const etag = content.match(/<ETag>(.*?)<\/ETag>/)?.[1]?.replace(/&quot;/g, "");
+      const size = parseInt(
+        content.match(/<Size>(.*?)<\/Size>/)?.[1] || "0",
+        10,
+      );
+      const lastModified = content.match(/<LastModified>(.*?)<\/LastModified>/)
+        ?.[1];
+      const etag = content.match(/<ETag>(.*?)<\/ETag>/)?.[1]?.replace(
+        /&quot;/g,
+        "",
+      );
 
       objects.push({
         key,
@@ -447,7 +489,11 @@ export class OSSStorageAdapter implements CloudStorageAdapter {
     };
   }
 
-  async copy(sourcePath: string, destPath: string, options?: CopyOptions): Promise<void> {
+  async copy(
+    sourcePath: string,
+    destPath: string,
+    options?: CopyOptions,
+  ): Promise<void> {
     const sourceBucket = options?.sourceBucket || this.config.bucket;
     const headers: Record<string, string> = {
       "x-oss-copy-source": `/${sourceBucket}/${sourcePath}`,
@@ -459,11 +505,16 @@ export class OSSStorageAdapter implements CloudStorageAdapter {
 
     const response = await this.request("PUT", destPath, { headers });
     if (!response.ok) {
-      throw new Error(`OSS 复制失败: ${response.status}`);
+      throw new Error(
+        $tr("upload.oss.copyFailed", { status: String(response.status) }),
+      );
     }
   }
 
-  async getPresignedUrl(path: string, options?: PresignedUrlOptions): Promise<string> {
+  async getPresignedUrl(
+    path: string,
+    options?: PresignedUrlOptions,
+  ): Promise<string> {
     const method = options?.method || "GET";
     const expiresIn = options?.expiresIn || 3600;
     const expires = Math.floor(Date.now() / 1000) + expiresIn;
@@ -533,14 +584,19 @@ export class OSSStorageAdapter implements CloudStorageAdapter {
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`OSS 初始化分片上传失败: ${response.status} ${text}`);
+      throw new Error(
+        $tr("upload.oss.initMultipartFailed", {
+          status: String(response.status),
+          text,
+        }),
+      );
     }
 
     const text = await response.text();
     const uploadId = text.match(/<UploadId>(.*?)<\/UploadId>/)?.[1];
 
     if (!uploadId) {
-      throw new Error("OSS 初始化分片上传失败: 未获取到 UploadId");
+      throw new Error($tr("upload.oss.initMultipartNoUploadId"));
     }
 
     return { uploadId, key };
@@ -568,7 +624,12 @@ export class OSSStorageAdapter implements CloudStorageAdapter {
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`OSS 上传分片失败: ${response.status} ${text}`);
+      throw new Error(
+        $tr("upload.oss.uploadPartFailed", {
+          status: String(response.status),
+          text,
+        }),
+      );
     }
 
     const etag = response.headers.get("ETag")?.replace(/"/g, "") || "";
@@ -588,10 +649,12 @@ export class OSSStorageAdapter implements CloudStorageAdapter {
 
     const partsXml = sortedParts
       .map(
-        (p) => `<Part><PartNumber>${p.partNumber}</PartNumber><ETag>"${p.etag}"</ETag></Part>`,
+        (p) =>
+          `<Part><PartNumber>${p.partNumber}</PartNumber><ETag>"${p.etag}"</ETag></Part>`,
       )
       .join("");
-    const body = `<CompleteMultipartUpload>${partsXml}</CompleteMultipartUpload>`;
+    const body =
+      `<CompleteMultipartUpload>${partsXml}</CompleteMultipartUpload>`;
     const bodyData = new TextEncoder().encode(body);
 
     const response = await this.request("POST", key, {
@@ -605,7 +668,12 @@ export class OSSStorageAdapter implements CloudStorageAdapter {
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`OSS 完成分片上传失败: ${response.status} ${text}`);
+      throw new Error(
+        $tr("upload.oss.completeMultipartFailed", {
+          status: String(response.status),
+          text,
+        }),
+      );
     }
   }
 
@@ -618,7 +686,11 @@ export class OSSStorageAdapter implements CloudStorageAdapter {
     });
 
     if (!response.ok && response.status !== 404) {
-      throw new Error(`OSS 取消分片上传失败: ${response.status}`);
+      throw new Error(
+        $tr("upload.oss.abortMultipartFailed", {
+          status: String(response.status),
+        }),
+      );
     }
   }
 
@@ -631,7 +703,9 @@ export class OSSStorageAdapter implements CloudStorageAdapter {
     });
 
     if (!response.ok) {
-      throw new Error(`OSS 列出分片失败: ${response.status}`);
+      throw new Error(
+        $tr("upload.oss.listPartsFailed", { status: String(response.status) }),
+      );
     }
 
     const text = await response.text();
@@ -644,14 +718,21 @@ export class OSSStorageAdapter implements CloudStorageAdapter {
         content.match(/<PartNumber>(.*?)<\/PartNumber>/)?.[1] || "0",
         10,
       );
-      const etag = content.match(/<ETag>(.*?)<\/ETag>/)?.[1]?.replace(/&quot;|"/g, "") || "";
-      const size = parseInt(content.match(/<Size>(.*?)<\/Size>/)?.[1] || "0", 10);
+      const etag =
+        content.match(/<ETag>(.*?)<\/ETag>/)?.[1]?.replace(/&quot;|"/g, "") ||
+        "";
+      const size = parseInt(
+        content.match(/<Size>(.*?)<\/Size>/)?.[1] || "0",
+        10,
+      );
 
       parts.push({ partNumber, etag, size });
     }
 
     const isTruncated = text.includes("<IsTruncated>true</IsTruncated>");
-    const nextMarker = text.match(/<NextPartNumberMarker>(.*?)<\/NextPartNumberMarker>/)?.[1];
+    const nextMarker = text.match(
+      /<NextPartNumberMarker>(.*?)<\/NextPartNumberMarker>/,
+    )?.[1];
 
     return {
       parts,

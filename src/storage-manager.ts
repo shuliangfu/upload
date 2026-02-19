@@ -33,20 +33,30 @@
  * ```
  */
 
-import type { CloudStorageAdapter, CloudUploadOptions, S3Config, OSSConfig, COSConfig, ListOptions, ListResult, ObjectMetadata } from "./adapters/types.ts";
+import type {
+  CloudStorageAdapter,
+  CloudUploadOptions,
+  COSConfig,
+  ListOptions,
+  ListResult,
+  ObjectMetadata,
+  OSSConfig,
+  S3Config,
+} from "./adapters/types.ts";
 import { S3StorageAdapter } from "./adapters/s3.ts";
 import { OSSStorageAdapter } from "./adapters/oss.ts";
 import { COSStorageAdapter } from "./adapters/cos.ts";
 // 使用跨运行时文件系统 API
 import {
-  mkdir,
-  writeFile,
-  readFile,
-  stat,
-  remove,
-  readdir,
   type FileInfo,
+  mkdir,
+  readdir,
+  readFile,
+  remove,
+  stat,
+  writeFile,
 } from "@dreamer/runtime-adapter";
+import { $tr } from "./i18n.ts";
 
 // ============================================================================
 // 类型定义
@@ -255,7 +265,9 @@ class LocalStorageAdapter {
   async listObjects(options?: ListOptions): Promise<ListResult> {
     await this.init();
     const prefix = options?.prefix || "";
-    const dir = prefix ? `${this.config.baseDir}/${prefix}` : this.config.baseDir;
+    const dir = prefix
+      ? `${this.config.baseDir}/${prefix}`
+      : this.config.baseDir;
 
     const objects: Array<{
       key: string;
@@ -289,7 +301,10 @@ class LocalStorageAdapter {
   /**
    * 生成访问 URL（本地存储直接返回路径）
    */
-  getPresignedUrl(key: string, _options?: { expiresIn?: number }): Promise<string> {
+  getPresignedUrl(
+    key: string,
+    _options?: { expiresIn?: number },
+  ): Promise<string> {
     return Promise.resolve(this.getUrl(key));
   }
 }
@@ -345,21 +360,21 @@ export class StorageManager {
     switch (config.type) {
       case "s3":
         if (!config.s3) {
-          throw new Error("S3 配置缺失");
+          throw new Error($tr("upload.storage.s3ConfigMissing"));
         }
         this.adapter = new S3StorageAdapter(config.s3);
         break;
 
       case "oss":
         if (!config.oss) {
-          throw new Error("OSS 配置缺失");
+          throw new Error($tr("upload.storage.ossConfigMissing"));
         }
         this.adapter = new OSSStorageAdapter(config.oss);
         break;
 
       case "cos":
         if (!config.cos) {
-          throw new Error("COS 配置缺失");
+          throw new Error($tr("upload.storage.cosConfigMissing"));
         }
         this.adapter = new COSStorageAdapter(config.cos);
         break;
@@ -367,7 +382,7 @@ export class StorageManager {
       case "local":
       default:
         if (!config.local) {
-          throw new Error("本地存储配置缺失");
+          throw new Error($tr("upload.storage.localConfigMissing"));
         }
         this.adapter = new LocalStorageAdapter(config.local);
         break;
@@ -610,11 +625,17 @@ export class StorageManager {
         const region = cloudAdapter.getRegion();
 
         if (this.storageType === "s3") {
-          return Promise.resolve(`https://${bucket}.s3.${region}.amazonaws.com/${key}`);
+          return Promise.resolve(
+            `https://${bucket}.s3.${region}.amazonaws.com/${key}`,
+          );
         } else if (this.storageType === "oss") {
-          return Promise.resolve(`https://${bucket}.oss-${region}.aliyuncs.com/${key}`);
+          return Promise.resolve(
+            `https://${bucket}.oss-${region}.aliyuncs.com/${key}`,
+          );
         } else {
-          return Promise.resolve(`https://${bucket}.cos.${region}.myqcloud.com/${key}`);
+          return Promise.resolve(
+            `https://${bucket}.cos.${region}.myqcloud.com/${key}`,
+          );
         }
       }
       return (this.adapter as CloudStorageAdapter).getPresignedUrl(key, {
@@ -653,7 +674,9 @@ export class StorageManager {
  * @param config - 存储配置
  * @returns StorageManager 实例
  */
-export function createStorageManager(config: StorageManagerConfig): StorageManager {
+export function createStorageManager(
+  config: StorageManagerConfig,
+): StorageManager {
   return new StorageManager(config);
 }
 

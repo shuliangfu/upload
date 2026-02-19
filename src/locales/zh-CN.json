@@ -1,0 +1,84 @@
+{
+  "upload": {
+    "fileNotFound": "文件不存在: {path}",
+    "s3": {
+      "deleteFailed": "S3 删除失败: {status} {statusText}",
+      "uploadFailed": "S3 上传失败: {status} {text}",
+      "downloadFailed": "S3 下载失败: {status} {statusText}",
+      "getMetadataFailed": "S3 获取元数据失败: {status}",
+      "listFailed": "S3 列表失败: {status}",
+      "copyFailed": "S3 复制失败: {status}",
+      "initMultipartFailed": "S3 初始化分片上传失败: {status} {text}",
+      "initMultipartNoUploadId": "S3 初始化分片上传失败: 未获取到 UploadId",
+      "uploadPartFailed": "S3 上传分片失败: {status} {text}",
+      "completeMultipartFailed": "S3 完成分片上传失败: {status} {text}",
+      "abortMultipartFailed": "S3 取消分片上传失败: {status}",
+      "listPartsFailed": "S3 列出分片失败: {status}"
+    },
+    "cos": {
+      "deleteFailed": "COS 删除失败: {status} {statusText}",
+      "uploadFailed": "COS 上传失败: {status} {text}",
+      "downloadFailed": "COS 下载失败: {status} {statusText}",
+      "getMetadataFailed": "COS 获取元数据失败: {status}",
+      "listFailed": "COS 列表失败: {status}",
+      "copyFailed": "COS 复制失败: {status}",
+      "initMultipartFailed": "COS 初始化分片上传失败: {status} {text}",
+      "initMultipartNoUploadId": "COS 初始化分片上传失败: 未获取到 UploadId",
+      "uploadPartFailed": "COS 上传分片失败: {status} {text}",
+      "completeMultipartFailed": "COS 完成分片上传失败: {status} {text}",
+      "abortMultipartFailed": "COS 取消分片上传失败: {status}",
+      "listPartsFailed": "COS 列出分片失败: {status}"
+    },
+    "oss": {
+      "deleteFailed": "OSS 删除失败: {status} {statusText}",
+      "uploadFailed": "OSS 上传失败: {status} {text}",
+      "downloadFailed": "OSS 下载失败: {status} {statusText}",
+      "getMetadataFailed": "OSS 获取元数据失败: {status}",
+      "listFailed": "OSS 列表失败: {status}",
+      "copyFailed": "OSS 复制失败: {status}",
+      "initMultipartFailed": "OSS 初始化分片上传失败: {status} {text}",
+      "initMultipartNoUploadId": "OSS 初始化分片上传失败: 未获取到 UploadId",
+      "uploadPartFailed": "OSS 上传分片失败: {status} {text}",
+      "completeMultipartFailed": "OSS 完成分片上传失败: {status} {text}",
+      "abortMultipartFailed": "OSS 取消分片上传失败: {status}",
+      "listPartsFailed": "OSS 列出分片失败: {status}"
+    },
+    "multipart": {
+      "partSizeTooSmall": "分片大小不能小于 {min}",
+      "partSizeTooLarge": "分片大小不能大于 {max}",
+      "partsExceedLimit": "文件过大，分片数量 {count} 超过最大限制 {max}",
+      "partsUploadFailed": "{count} 个分片上传失败"
+    },
+    "storage": {
+      "s3ConfigMissing": "S3 配置缺失",
+      "ossConfigMissing": "OSS 配置缺失",
+      "cosConfigMissing": "COS 配置缺失",
+      "localConfigMissing": "本地存储配置缺失"
+    },
+    "server": {
+      "initMultipartFailed": "初始化分片上传失败: {message}",
+      "uploadPartFailed": "上传分片失败: {message}",
+      "completeMultipartFailed": "完成分片上传失败: {message}",
+      "abortMultipartFailed": "取消分片上传失败: {message}",
+      "queryUploadStatusFailed": "查询上传状态失败: {message}"
+    },
+    "scanner": {
+      "virusTotalApiError": "VirusTotal API 错误: {status}",
+      "virusTotalUploadFailed": "VirusTotal 上传失败: {status}",
+      "scanTimeout": "扫描超时",
+      "atLeastOneScanner": "至少需要一个扫描器",
+      "noScannerAvailable": "没有可用的扫描器"
+    },
+    "client": {
+      "httpError": "HTTP {status}: {statusText}",
+      "uploadCancelled": "上传已取消",
+      "chunksUploadFailed": "{count} 个分片上传失败"
+    },
+    "resumable": {
+      "uploadCancelled": "上传已取消"
+    },
+    "utils": {
+      "fileTypeMismatch": "文件类型与扩展名不匹配！"
+    }
+  }
+}

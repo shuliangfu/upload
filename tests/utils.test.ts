@@ -7,34 +7,30 @@
  * deno test -A tests/utils.test.ts
  */
 
+import { describe, expect, it } from "@dreamer/test";
 import {
-  describe,
-  it,
-  expect,
-} from "@dreamer/test";
-import {
-  getFileExtension,
-  getBaseName,
-  getMimeType,
-  matchMimeType,
+  computeHash,
+  computeShortHash,
+  formatFileSize,
+  generateDateSubdir,
   generateFilename,
+  generateMonthSubdir,
   generateTimestampFilename,
+  getBaseName,
+  getFileExtension,
+  getFilenameFromUrl,
+  getMimeType,
+  isArchive,
+  isAudio,
+  isDocument,
+  isHiddenFile,
+  isImage,
+  isPathSafe,
+  isVideo,
+  matchMimeType,
   sanitizeFilename,
   validateFile,
   validateFiles,
-  formatFileSize,
-  isImage,
-  isVideo,
-  isAudio,
-  isDocument,
-  isArchive,
-  isHiddenFile,
-  isPathSafe,
-  computeHash,
-  computeShortHash,
-  generateDateSubdir,
-  generateMonthSubdir,
-  getFilenameFromUrl,
 } from "../src/utils.ts";
 
 // ============================================================================
@@ -105,8 +101,12 @@ describe("文件名处理", () => {
 
   describe("getFilenameFromUrl", () => {
     it("应该从 URL 中提取文件名", () => {
-      expect(getFilenameFromUrl("https://example.com/path/to/file.jpg")).toBe("file.jpg");
-      expect(getFilenameFromUrl("https://example.com/image.png?v=123")).toBe("image.png");
+      expect(getFilenameFromUrl("https://example.com/path/to/file.jpg")).toBe(
+        "file.jpg",
+      );
+      expect(getFilenameFromUrl("https://example.com/image.png?v=123")).toBe(
+        "image.png",
+      );
       expect(getFilenameFromUrl("/uploads/doc.pdf")).toBe("doc.pdf");
     });
   });
@@ -217,7 +217,11 @@ describe("文件验证", () => {
   describe("validateFile", () => {
     it("应该验证文件大小", () => {
       const result = validateFile(
-        { name: "large.bin", type: "application/octet-stream", size: 1024 * 1024 },
+        {
+          name: "large.bin",
+          type: "application/octet-stream",
+          size: 1024 * 1024,
+        },
         { maxFileSize: 1024 },
       );
       expect(result.valid).toBe(false);

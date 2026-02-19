@@ -7,16 +7,11 @@
  * deno test -A tests/multipart.test.ts
  */
 
+import { beforeAll, describe, expect, it } from "@dreamer/test";
 import {
-  describe,
-  it,
-  expect,
-  beforeAll,
-} from "@dreamer/test";
-import {
-  MultipartUploader,
   calculatePartSize,
   createMultipartUploader,
+  MultipartUploader,
 } from "../src/multipart.ts";
 import { createS3Adapter } from "../src/adapters/s3.ts";
 
@@ -49,7 +44,9 @@ let minioAvailable = false;
  * 生成唯一的测试键
  */
 function generateTestKey(prefix: string): string {
-  return `multipart-${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `multipart-${prefix}-${Date.now()}-${
+    Math.random().toString(36).slice(2)
+  }`;
 }
 
 /**
@@ -57,9 +54,12 @@ function generateTestKey(prefix: string): string {
  */
 async function checkMinioAvailable(): Promise<boolean> {
   try {
-    const response = await fetch(`${TEST_S3_CONFIG.endpoint}/minio/health/live`, {
-      signal: AbortSignal.timeout(3000),
-    });
+    const response = await fetch(
+      `${TEST_S3_CONFIG.endpoint}/minio/health/live`,
+      {
+        signal: AbortSignal.timeout(3000),
+      },
+    );
     // 消费响应体以避免资源泄漏
     await response.text();
     return response.ok;
@@ -189,7 +189,14 @@ describe("MultipartUploader 测试", () => {
         fileSize: TEST_FILE_SIZE,
         partSize: 5 * 1024 * 1024,
         parts: [
-          { partNumber: 1, start: 0, end: 5 * 1024 * 1024, size: 5 * 1024 * 1024, status: "completed" as const, etag: "test" },
+          {
+            partNumber: 1,
+            start: 0,
+            end: 5 * 1024 * 1024,
+            size: 5 * 1024 * 1024,
+            status: "completed" as const,
+            etag: "test",
+          },
         ],
         startTime: Date.now(),
         options: {},

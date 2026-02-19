@@ -31,13 +31,17 @@
  * ```
  */
 
-import type { CloudStorageAdapter, CloudUploadOptions } from "./adapters/types.ts";
+import type {
+  CloudStorageAdapter,
+  CloudUploadOptions,
+} from "./adapters/types.ts";
 import {
   createMultipartUploader,
   type MultipartUploadConfig,
   type MultipartUploadState,
   type UploadProgress,
 } from "./multipart.ts";
+import { $tr } from "./i18n.ts";
 
 // ============================================================================
 // 类型定义
@@ -100,7 +104,13 @@ export interface ResumableUploadState {
   /** 文件哈希（用于验证） */
   fileHash: string;
   /** 上传状态 */
-  status: "pending" | "uploading" | "paused" | "completed" | "failed" | "cancelled";
+  status:
+    | "pending"
+    | "uploading"
+    | "paused"
+    | "completed"
+    | "failed"
+    | "cancelled";
   /** 分片上传状态 */
   multipartState?: MultipartUploadState;
   /** 创建时间 */
@@ -236,7 +246,9 @@ export class MemoryStateStore implements UploadStateStore {
    */
   listPending(): Promise<ResumableUploadState[]> {
     const pending = Array.from(this.states.values()).filter(
-      (s) => s.status === "pending" || s.status === "paused" || s.status === "uploading",
+      (s) =>
+        s.status === "pending" || s.status === "paused" ||
+        s.status === "uploading",
     );
     return Promise.resolve(pending);
   }
@@ -411,8 +423,9 @@ export class LocalStorageStateStore implements UploadStateStore {
  * ```
  */
 export class ResumableUploader {
-  private config: Required<Omit<ResumableUploaderConfig, keyof MultipartUploadConfig>> &
-    MultipartUploadConfig;
+  private config:
+    & Required<Omit<ResumableUploaderConfig, keyof MultipartUploadConfig>>
+    & MultipartUploadConfig;
   private storage: CloudStorageAdapter;
   private stateStore: UploadStateStore;
   private activeUploads: Map<string, { abort: () => void }> = new Map();
@@ -473,14 +486,26 @@ export class ResumableUploader {
    * @returns 上传结果
    */
   async upload(params: ResumableUploadParams): Promise<ResumableUploadResult> {
-    const { file, key, filename, options, onProgress, onStateChange, metadata } = params;
+    const {
+      file,
+      key,
+      filename,
+      options,
+      onProgress,
+      onStateChange,
+      metadata,
+    } = params;
 
     const startTime = Date.now();
     const id = crypto.randomUUID();
     const fileHash = await this.calculateFileHash(file);
 
     // 检查是否有相同文件的未完成上传
-    const existingUpload = await this.findExistingUpload(key, fileHash, file.length);
+    const existingUpload = await this.findExistingUpload(
+      key,
+      fileHash,
+      file.length,
+    );
     if (existingUpload) {
       // 恢复现有上传
       return this.resume(existingUpload.id, file, onProgress, onStateChange);
@@ -503,7 +528,13 @@ export class ResumableUploader {
     await this.stateStore.save(id, state);
 
     // 执行上传
-    return this.executeUpload(state, file, onProgress, onStateChange, startTime);
+    return this.executeUpload(
+      state,
+      file,
+      onProgress,
+      onStateChange,
+      startTime,
+    );
   }
 
   /**
@@ -553,7 +584,13 @@ export class ResumableUploader {
     state.updatedAt = Date.now();
     await this.stateStore.save(id, state);
 
-    return this.executeUpload(state, file, onProgress, onStateChange, Date.now());
+    return this.executeUpload(
+      state,
+      file,
+      onProgress,
+      onStateChange,
+      Date.now(),
+    );
   }
 
   /**
@@ -602,7 +639,7 @@ export class ResumableUploader {
         options: state.options,
         onProgress,
         onStateChange: async (multipartState) => {
-          if (aborted) throw new Error("上传已取消");
+          if (aborted) throw new Error($tr("upload.resumable.uploadCancelled"));
           state.multipartState = multipartState;
           onStateChange?.(state);
           await autoSave(multipartState);
@@ -755,7 +792,8 @@ export class ResumableUploader {
 
     return (
       pending.find(
-        (s) => s.key === key && s.fileHash === fileHash && s.fileSize === fileSize,
+        (s) =>
+          s.key === key && s.fileHash === fileHash && s.fileSize === fileSize,
       ) || null
     );
   }

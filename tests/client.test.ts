@@ -7,18 +7,12 @@
  * deno test -A tests/client.test.ts
  */
 
+import { afterAll, beforeAll, describe, expect, it } from "@dreamer/test";
 import {
-  describe,
-  it,
-  expect,
-  beforeAll,
-  afterAll,
-} from "@dreamer/test";
-import {
-  UploadClient,
+  calculateFileHash,
   createUploadClient,
   formatSize,
-  calculateFileHash,
+  UploadClient,
 } from "../src/client/mod.ts";
 import { MultipartUploadHandler } from "../src/server/mod.ts";
 import { createS3Adapter } from "../src/adapters/s3.ts";
@@ -78,9 +72,12 @@ function generateTestKey(): string {
  */
 async function checkMinioAvailable(): Promise<boolean> {
   try {
-    const response = await fetch(`${TEST_S3_CONFIG.endpoint}/minio/health/live`, {
-      signal: AbortSignal.timeout(3000),
-    });
+    const response = await fetch(
+      `${TEST_S3_CONFIG.endpoint}/minio/health/live`,
+      {
+        signal: AbortSignal.timeout(3000),
+      },
+    );
     // 消费响应体以避免资源泄漏
     await response.text();
     return response.ok;
@@ -135,7 +132,7 @@ async function startTestServer(): Promise<void> {
       const response = await handler!.handle(request, "/upload");
       if (response) return response;
       return new Response("Not Found", { status: 404 });
-    }
+    },
   );
 
   // 等待服务器启动
@@ -187,7 +184,7 @@ describe("UploadClient 测试", () => {
     it("应该能计算文件哈希", async () => {
       const data = new Uint8Array([1, 2, 3, 4, 5]);
       const hash = await calculateFileHash(data);
-      
+
       expect(hash).toBeDefined();
       expect(hash.length).toBe(64); // SHA-256 哈希长度
       expect(/^[a-f0-9]+$/.test(hash)).toBe(true);
@@ -196,20 +193,20 @@ describe("UploadClient 测试", () => {
     it("相同文件应该有相同哈希", async () => {
       const data1 = new Uint8Array([1, 2, 3, 4, 5]);
       const data2 = new Uint8Array([1, 2, 3, 4, 5]);
-      
+
       const hash1 = await calculateFileHash(data1);
       const hash2 = await calculateFileHash(data2);
-      
+
       expect(hash1).toBe(hash2);
     });
 
     it("不同文件应该有不同哈希", async () => {
       const data1 = new Uint8Array([1, 2, 3, 4, 5]);
       const data2 = new Uint8Array([5, 4, 3, 2, 1]);
-      
+
       const hash1 = await calculateFileHash(data1);
       const hash2 = await calculateFileHash(data2);
-      
+
       expect(hash1).not.toBe(hash2);
     });
   });
@@ -223,7 +220,7 @@ describe("UploadClient 测试", () => {
       const client = createUploadClient({
         endpoint: TEST_ENDPOINT,
       });
-      
+
       expect(client).toBeDefined();
       expect(client).toBeInstanceOf(UploadClient);
     });
@@ -238,7 +235,7 @@ describe("UploadClient 测试", () => {
         headers: { "X-Custom": "value" },
         token: "test-token",
       });
-      
+
       expect(client).toBeDefined();
     });
 
@@ -246,7 +243,7 @@ describe("UploadClient 测试", () => {
       const client = createUploadClient({
         endpoint: TEST_ENDPOINT,
       });
-      
+
       client.setToken("new-token");
       // 验证不抛出错误
       expect(client).toBeDefined();
@@ -256,7 +253,7 @@ describe("UploadClient 测试", () => {
       const client = createUploadClient({
         endpoint: TEST_ENDPOINT,
       });
-      
+
       client.setHeaders({ "X-Custom": "value" });
       // 验证不抛出错误
       expect(client).toBeDefined();

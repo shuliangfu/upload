@@ -37,7 +37,7 @@ function calculateParts(fileSize: number, partSize: number) {
 }
 
 const fileSize = 100 * 1024 * 1024; // 100MB
-const partSize = 5 * 1024 * 1024;   // 5MB 每片
+const partSize = 5 * 1024 * 1024; // 5MB 每片
 
 const parts = calculateParts(fileSize, partSize);
 
@@ -46,10 +46,18 @@ console.log(`分片大小: ${formatFileSize(partSize)}`);
 console.log(`总分片数: ${parts.length}`);
 console.log("\n分片详情:");
 parts.slice(0, 3).forEach((part, i) => {
-  console.log(`  分片 ${i + 1}: ${formatFileSize(part.start)} - ${formatFileSize(part.end)} (${formatFileSize(part.size)})`);
+  console.log(
+    `  分片 ${i + 1}: ${formatFileSize(part.start)} - ${
+      formatFileSize(part.end)
+    } (${formatFileSize(part.size)})`,
+  );
 });
 console.log(`  ...`);
-console.log(`  分片 ${parts.length}: ${formatFileSize(parts[parts.length - 1].start)} - ${formatFileSize(parts[parts.length - 1].end)}`);
+console.log(
+  `  分片 ${parts.length}: ${formatFileSize(parts[parts.length - 1].start)} - ${
+    formatFileSize(parts[parts.length - 1].end)
+  }`,
+);
 
 // ============================================================================
 // 分片上传配置
@@ -69,10 +77,10 @@ interface MultipartUploadConfig {
 }
 
 const config: MultipartUploadConfig = {
-  partSize: 5 * 1024 * 1024,  // 5MB 分片
-  concurrency: 3,               // 3 个并发
-  retries: 3,                   // 失败重试 3 次
-  retryDelay: 1000,             // 重试间隔 1 秒
+  partSize: 5 * 1024 * 1024, // 5MB 分片
+  concurrency: 3, // 3 个并发
+  retries: 3, // 失败重试 3 次
+  retryDelay: 1000, // 重试间隔 1 秒
 };
 
 console.log("分片上传配置:");

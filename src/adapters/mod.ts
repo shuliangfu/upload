@@ -80,3 +80,13 @@ export { createOSSAdapter, OSSStorageAdapter } from "./oss.ts";
 // ============================================================================
 
 export { COSStorageAdapter, createCOSAdapter } from "./cos.ts";
+
+// ============================================================================
+// 本地磁盘（完整 CloudStorageAdapter，含分片，供 MultipartUploadHandler）
+// ============================================================================
+
+export {
+  createLocalCloudStorageAdapter,
+  LocalCloudStorageAdapter,
+} from "./local-cloud.ts";
+export type { LocalCloudStorageConfig } from "./local-cloud.ts";

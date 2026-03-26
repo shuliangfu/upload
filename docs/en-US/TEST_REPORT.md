@@ -22,16 +22,16 @@
 
 ### Test files
 
-| Test file                  | Count | Status       | Description                              |
-| -------------------------- | ----- | ------------ | ---------------------------------------- |
-| `client.test.ts`           | 16    | ✅ All pass  | Upload client                            |
-| `cos.test.ts`              | 8     | ✅ All pass  | Tencent COS adapter (MinIO S3 compat)    |
-| `multipart.test.ts`        | 6     | ✅ All pass  | Multipart uploader                       |
-| `oss.test.ts`              | 8     | ✅ All pass  | Aliyun OSS adapter (MinIO S3 compat)     |
-| `s3.test.ts`               | 9     | ✅ All pass  | AWS S3 adapter (MinIO)                   |
-| `server.test.ts`           | 9     | ✅ All pass  | Server upload handler                    |
-| `storage-manager.test.ts`  | 17    | ✅ All pass  | Storage manager                          |
-| `utils.test.ts`            | 34    | ✅ All pass  | Utility functions                        |
+| Test file                 | Count | Status      | Description                           |
+| ------------------------- | ----- | ----------- | ------------------------------------- |
+| `client.test.ts`          | 16    | ✅ All pass | Upload client                         |
+| `cos.test.ts`             | 8     | ✅ All pass | Tencent COS adapter (MinIO S3 compat) |
+| `multipart.test.ts`       | 6     | ✅ All pass | Multipart uploader                    |
+| `oss.test.ts`             | 8     | ✅ All pass | Aliyun OSS adapter (MinIO S3 compat)  |
+| `s3.test.ts`              | 9     | ✅ All pass | AWS S3 adapter (MinIO)                |
+| `server.test.ts`          | 9     | ✅ All pass | Server upload handler                 |
+| `storage-manager.test.ts` | 17    | ✅ All pass | Storage manager                       |
+| `utils.test.ts`           | 34    | ✅ All pass | Utility functions                     |
 
 ## Feature test details
 
@@ -331,16 +331,16 @@
 
 ### By category
 
-| Category        | Count | Share  |
-| --------------- | ----- | ------ |
-| Utilities       | 34    | 31.8%  |
-| Storage manager | 17    | 15.9%  |
-| Upload client   | 16    | 15.0%  |
-| S3 adapter      | 9     | 8.4%   |
-| Server handler  | 9     | 8.4%   |
-| COS adapter     | 8     | 7.5%   |
-| OSS adapter     | 8     | 7.5%   |
-| Multipart       | 6     | 5.6%   |
+| Category        | Count | Share |
+| --------------- | ----- | ----- |
+| Utilities       | 34    | 31.8% |
+| Storage manager | 17    | 15.9% |
+| Upload client   | 16    | 15.0% |
+| S3 adapter      | 9     | 8.4%  |
+| Server handler  | 9     | 8.4%  |
+| COS adapter     | 8     | 7.5%  |
+| OSS adapter     | 8     | 7.5%  |
+| Multipart       | 6     | 5.6%  |
 
 ## Conclusion
 
@@ -379,10 +379,10 @@ All 107 tests pass, covering:
 
 ---
 
-**Report date**: 2026-01-30  
-**Framework**: @dreamer/test@^1.0.0-beta.40  
-**Environment**: Bun 1.3.5, Deno 2.6.4  
-**Total**: 107  
+**Report date**: 2026-01-30\
+**Framework**: @dreamer/test@^1.0.0-beta.40\
+**Environment**: Bun 1.3.5, Deno 2.6.4\
+**Total**: 107\
 **Pass rate**: 100% ✅
 
 ---

@@ -1,8 +1,10 @@
 # @dreamer/upload
 
-> A complete file upload solution compatible with Deno and Bun, supporting chunked upload, resumable upload, and multi-cloud storage adapters.
+> A complete file upload solution compatible with Deno and Bun, supporting
+> chunked upload, resumable upload, and multi-cloud storage adapters.
 
-**中文**: [README (中文)](./docs/zh-CN/README.md) · **Client**: [README](./docs/en-US/client/README.md)
+**中文**: [README (中文)](./docs/zh-CN/README.md) · **Client**:
+[README](./docs/en-US/client/README.md)
 
 [![JSR](https://jsr.io/badges/@dreamer/upload)](https://jsr.io/@dreamer/upload)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
@@ -12,13 +14,20 @@
 
 ## Features
 
-A complete file upload package providing client, server, and cloud storage adapters in one pipeline. Pure TypeScript implementation with enterprise-oriented features such as chunked upload, resumable upload, and file security scanning. Suitable for file management systems, cloud storage applications, and content management platforms.
+A complete file upload package providing client, server, and cloud storage
+adapters in one pipeline. Pure TypeScript implementation with
+enterprise-oriented features such as chunked upload, resumable upload, and file
+security scanning. Suitable for file management systems, cloud storage
+applications, and content management platforms.
 
 Core features:
 
-- **Multi-cloud storage**: AWS S3, Aliyun OSS, Tencent Cloud COS, and local storage
-- **Chunked upload**: Automatic chunking for large files, concurrent upload and resumable upload
-- **Security scanning**: File type detection, virus scanning, sensitive content detection
+- **Multi-cloud storage**: AWS S3, Aliyun OSS, Tencent Cloud COS, and local
+  storage
+- **Chunked upload**: Automatic chunking for large files, concurrent upload and
+  resumable upload
+- **Security scanning**: File type detection, virus scanning, sensitive content
+  detection
 - **Storage management**: Auto cleanup, quota management, file lifecycle
 
 ---
@@ -48,12 +57,12 @@ import { UploadClient } from "@dreamer/upload/client";
 
 ## Environment compatibility
 
-| Environment   | Version  | Status                                      |
-| ------------- | -------- | ------------------------------------------- |
-| **Deno**      | 2.5+     | ✅ Fully supported                           |
-| **Bun**       | 1.0+     | ✅ Fully supported                           |
-| **Server**    | -        | ✅ Supported (Deno and Bun runtimes)        |
-| **Browser**   | -        | ✅ Supported (client module)                |
+| Environment | Version | Status                               |
+| ----------- | ------- | ------------------------------------ |
+| **Deno**    | 2.5+    | ✅ Fully supported                   |
+| **Bun**     | 1.0+    | ✅ Fully supported                   |
+| **Server**  | -       | ✅ Supported (Deno and Bun runtimes) |
+| **Browser** | -       | ✅ Supported (client module)         |
 
 ---
 
@@ -111,10 +120,10 @@ import { UploadClient } from "@dreamer/upload/client";
 
 ```typescript
 import {
-  Uploader,
-  validateFile,
   generateFilename,
   getMimeType,
+  Uploader,
+  validateFile,
 } from "@dreamer/upload";
 
 // Create upload handler
@@ -134,7 +143,7 @@ console.log("Upload result:", result);
 ### Client basic example
 
 ```typescript
-import { UploadClient, createUploadClient } from "@dreamer/upload/client";
+import { createUploadClient, UploadClient } from "@dreamer/upload/client";
 
 // Create upload client
 const client = createUploadClient({
@@ -163,9 +172,9 @@ if (result.success) {
 
 ```typescript
 import {
-  createS3Adapter,
-  createOSSAdapter,
   createCOSAdapter,
+  createOSSAdapter,
+  createS3Adapter,
 } from "@dreamer/upload/adapters";
 
 // AWS S3
@@ -209,10 +218,13 @@ const url = await s3.getPresignedUrl("path/to/file.jpg", {
 ### Chunked upload
 
 ```typescript
-import { MultipartUploader, getRecommendedPartSize } from "@dreamer/upload/multipart";
+import {
+  getRecommendedPartSize,
+  MultipartUploader,
+} from "@dreamer/upload/multipart";
 import { createS3Adapter } from "@dreamer/upload/adapters";
 
-const adapter = createS3Adapter({ /* ... */ });
+const adapter = createS3Adapter({/* ... */});
 
 // Compute recommended part size
 const partSize = getRecommendedPartSize(fileSize);
@@ -234,7 +246,7 @@ const result = await uploader.upload("large-file.zip", fileData, {
 ### Client advanced usage
 
 ```typescript
-import { UploadClient, formatSize } from "@dreamer/upload/client";
+import { formatSize, UploadClient } from "@dreamer/upload/client";
 
 const client = new UploadClient({
   endpoint: "https://api.example.com/upload",
@@ -251,7 +263,9 @@ client.setToken("your-auth-token");
 const result = await client.upload(file, {
   filename: "example.jpg",
   onProgress: (progress) => {
-    console.log(`${progress.percentage}% - Speed: ${formatSize(progress.speed)}/s`);
+    console.log(
+      `${progress.percentage}% - Speed: ${formatSize(progress.speed)}/s`,
+    );
     console.log(`Remaining time: ${progress.remainingTime}s`);
   },
   onStateChange: (state) => {
@@ -279,13 +293,13 @@ import { MultipartUploadHandler } from "@dreamer/upload/server";
 import { createS3Adapter } from "@dreamer/upload/adapters";
 import { serve } from "@dreamer/runtime-adapter";
 
-const adapter = createS3Adapter({ /* ... */ });
+const adapter = createS3Adapter({/* ... */});
 
 // Create handler
 const handler = new MultipartUploadHandler({
   storage: adapter,
   maxFileSize: 100 * 1024 * 1024, // 100MB
-  maxPartSize: 10 * 1024 * 1024,  // 10MB
+  maxPartSize: 10 * 1024 * 1024, // 10MB
   allowedMimeTypes: ["image/*", "video/*"],
   pathPrefix: "uploads",
 });
@@ -303,7 +317,7 @@ serve({ port: 3000 }, async (request) => {
 ### Unified storage management
 
 ```typescript
-import { StorageManager, createStorageManagerFromEnv } from "@dreamer/upload";
+import { createStorageManagerFromEnv, StorageManager } from "@dreamer/upload";
 
 // Option 1: Manual config
 const storage = new StorageManager({
@@ -334,39 +348,33 @@ const url = await storage.getPublicUrl("path/to/file.jpg");
 
 ```typescript
 import {
-  // Filename handling
-  getFileExtension,
-  getBaseName,
-  sanitizeFilename,
-  generateFilename,
-  generateTimestampFilename,
-
-  // MIME type
-  getMimeType,
-  matchMimeType,
-
-  // File type detection
-  isImage,
-  isVideo,
-  isAudio,
-  isDocument,
-  isArchive,
-
-  // Validation
-  validateFile,
-  validateFiles,
-  isPathSafe,
-
   // Hash computation
   computeHash,
   computeShortHash,
-
   // Formatting
   formatFileSize,
-
   // Subdir generation
   generateDateSubdir,
+  generateFilename,
   generateMonthSubdir,
+  generateTimestampFilename,
+  getBaseName,
+  // Filename handling
+  getFileExtension,
+  // MIME type
+  getMimeType,
+  isArchive,
+  isAudio,
+  isDocument,
+  // File type detection
+  isImage,
+  isPathSafe,
+  isVideo,
+  matchMimeType,
+  sanitizeFilename,
+  // Validation
+  validateFile,
+  validateFiles,
 } from "@dreamer/upload";
 
 // Filename handling
@@ -413,132 +421,132 @@ const subdir = generateDateSubdir(); // "2026/01/30"
 
 #### Upload handler
 
-| API                                  | Description              | Returns                  |
-| ------------------------------------ | ------------------------ | ------------------------ |
-| `new Uploader(config)`               | Create upload handler    | `Uploader`               |
-| `uploader.handleFormData(formData)`  | Handle FormData upload    | `Promise<UploadResult>`  |
+| API                                 | Description            | Returns                 |
+| ----------------------------------- | ---------------------- | ----------------------- |
+| `new Uploader(config)`              | Create upload handler  | `Uploader`              |
+| `uploader.handleFormData(formData)` | Handle FormData upload | `Promise<UploadResult>` |
 
 #### Storage manager
 
-| API                                    | Description              | Returns                          |
-| -------------------------------------- | ------------------------ | -------------------------------- |
-| `new StorageManager(config)`          | Create storage manager   | `StorageManager`                 |
-| `createStorageManagerFromEnv()`       | Create from env vars     | `StorageManager`                 |
-| `storage.upload(key, data, options?)` | Upload file              | `Promise<UploadedFileInfo>`      |
-| `storage.download(key)`               | Download file            | `Promise<Uint8Array>`            |
-| `storage.exists(key)`                 | Check existence          | `Promise<boolean>`               |
-| `storage.delete(key)`                 | Delete file              | `Promise<void>`                  |
-| `storage.list(prefix?, options?)`     | List files               | `Promise<ListResult>`            |
-| `storage.getPublicUrl(key)`           | Get public URL           | `Promise<string>`                |
+| API                                   | Description            | Returns                     |
+| ------------------------------------- | ---------------------- | --------------------------- |
+| `new StorageManager(config)`          | Create storage manager | `StorageManager`            |
+| `createStorageManagerFromEnv()`       | Create from env vars   | `StorageManager`            |
+| `storage.upload(key, data, options?)` | Upload file            | `Promise<UploadedFileInfo>` |
+| `storage.download(key)`               | Download file          | `Promise<Uint8Array>`       |
+| `storage.exists(key)`                 | Check existence        | `Promise<boolean>`          |
+| `storage.delete(key)`                 | Delete file            | `Promise<void>`             |
+| `storage.list(prefix?, options?)`     | List files             | `Promise<ListResult>`       |
+| `storage.getPublicUrl(key)`           | Get public URL         | `Promise<string>`           |
 
 #### Utility functions
 
-| API                                      | Description                | Returns                   |
-| ---------------------------------------- | -------------------------- | ------------------------- |
-| `getFileExtension(filename)`             | Get file extension         | `string`                 |
-| `getBaseName(filename)`                 | Get base name              | `string`                 |
-| `sanitizeFilename(filename)`            | Sanitize filename          | `string`                 |
-| `generateFilename(filename)`            | Generate unique filename   | `string`                 |
-| `generateTimestampFilename(filename)`   | Generate timestamp filename| `string`                 |
-| `getMimeType(filename)`                 | Get MIME type              | `string`                 |
-| `matchMimeType(mimeType, pattern)`       | Match MIME type            | `boolean`                |
-| `isImage(filename)`                     | Check if image             | `boolean`                |
-| `isVideo(filename)`                     | Check if video             | `boolean`                |
-| `isAudio(filename)`                     | Check if audio             | `boolean`                |
-| `isDocument(filename)`                  | Check if document          | `boolean`                |
-| `isArchive(filename)`                   | Check if archive           | `boolean`                |
-| `validateFile(file, options)`           | Validate single file       | `FileValidationResult`   |
-| `validateFiles(files, options)`         | Validate multiple files    | `FileValidationResult[]` |
-| `isPathSafe(path)`                      | Check path safety          | `boolean`                |
-| `computeHash(data)`                     | Compute SHA-256 hash        | `Promise<string>`        |
-| `computeShortHash(data, length)`       | Compute short hash         | `Promise<string>`        |
-| `formatFileSize(bytes)`                | Format file size           | `string`                 |
-| `generateDateSubdir()`                  | Generate date subdir       | `string`                 |
-| `generateMonthSubdir()`                 | Generate month subdir      | `string`                 |
+| API                                   | Description                 | Returns                  |
+| ------------------------------------- | --------------------------- | ------------------------ |
+| `getFileExtension(filename)`          | Get file extension          | `string`                 |
+| `getBaseName(filename)`               | Get base name               | `string`                 |
+| `sanitizeFilename(filename)`          | Sanitize filename           | `string`                 |
+| `generateFilename(filename)`          | Generate unique filename    | `string`                 |
+| `generateTimestampFilename(filename)` | Generate timestamp filename | `string`                 |
+| `getMimeType(filename)`               | Get MIME type               | `string`                 |
+| `matchMimeType(mimeType, pattern)`    | Match MIME type             | `boolean`                |
+| `isImage(filename)`                   | Check if image              | `boolean`                |
+| `isVideo(filename)`                   | Check if video              | `boolean`                |
+| `isAudio(filename)`                   | Check if audio              | `boolean`                |
+| `isDocument(filename)`                | Check if document           | `boolean`                |
+| `isArchive(filename)`                 | Check if archive            | `boolean`                |
+| `validateFile(file, options)`         | Validate single file        | `FileValidationResult`   |
+| `validateFiles(files, options)`       | Validate multiple files     | `FileValidationResult[]` |
+| `isPathSafe(path)`                    | Check path safety           | `boolean`                |
+| `computeHash(data)`                   | Compute SHA-256 hash        | `Promise<string>`        |
+| `computeShortHash(data, length)`      | Compute short hash          | `Promise<string>`        |
+| `formatFileSize(bytes)`               | Format file size            | `string`                 |
+| `generateDateSubdir()`                | Generate date subdir        | `string`                 |
+| `generateMonthSubdir()`               | Generate month subdir       | `string`                 |
 
 ### Adapter module (@dreamer/upload/adapters)
 
 #### CloudStorageAdapter interface
 
-| API                                            | Description              | Returns                         |
-| ---------------------------------------------- | ------------------------ | ------------------------------- |
-| `upload(key, data, options?)`                  | Upload file              | `Promise<void>`                 |
-| `download(key, options?)`                      | Download file            | `Promise<Uint8Array>`           |
-| `delete(key)`                                  | Delete file              | `Promise<void>`                 |
-| `exists(key)`                                  | Check existence          | `Promise<boolean>`              |
-| `getMetadata(key)`                             | Get metadata             | `Promise<ObjectMetadata>`       |
-| `list(prefix?, options?)`                      | List objects             | `Promise<ListResult>`           |
-| `copy(sourceKey, destKey, options?)`           | Copy object              | `Promise<void>`                 |
-| `getPresignedUrl(key, options?)`               | Generate presigned URL   | `Promise<string>`              |
-| `initiateMultipartUpload(key, options?)`       | Init multipart upload    | `Promise<MultipartUploadInit>`  |
-| `uploadPart(key, uploadId, partNumber, data)`   | Upload part              | `Promise<UploadPartResult>`     |
-| `completeMultipartUpload(key, uploadId, parts)`| Complete multipart       | `Promise<void>`                 |
-| `abortMultipartUpload(key, uploadId)`          | Abort multipart          | `Promise<void>`                 |
-| `listParts(key, uploadId)`                     | List uploaded parts      | `Promise<ListPartsResult>`      |
+| API                                             | Description            | Returns                        |
+| ----------------------------------------------- | ---------------------- | ------------------------------ |
+| `upload(key, data, options?)`                   | Upload file            | `Promise<void>`                |
+| `download(key, options?)`                       | Download file          | `Promise<Uint8Array>`          |
+| `delete(key)`                                   | Delete file            | `Promise<void>`                |
+| `exists(key)`                                   | Check existence        | `Promise<boolean>`             |
+| `getMetadata(key)`                              | Get metadata           | `Promise<ObjectMetadata>`      |
+| `list(prefix?, options?)`                       | List objects           | `Promise<ListResult>`          |
+| `copy(sourceKey, destKey, options?)`            | Copy object            | `Promise<void>`                |
+| `getPresignedUrl(key, options?)`                | Generate presigned URL | `Promise<string>`              |
+| `initiateMultipartUpload(key, options?)`        | Init multipart upload  | `Promise<MultipartUploadInit>` |
+| `uploadPart(key, uploadId, partNumber, data)`   | Upload part            | `Promise<UploadPartResult>`    |
+| `completeMultipartUpload(key, uploadId, parts)` | Complete multipart     | `Promise<void>`                |
+| `abortMultipartUpload(key, uploadId)`           | Abort multipart        | `Promise<void>`                |
+| `listParts(key, uploadId)`                      | List uploaded parts    | `Promise<ListPartsResult>`     |
 
 #### Adapter factory functions
 
-| API                        | Description           | Config parameters                                                                 |
-| -------------------------- | --------------------- | --------------------------------------------------------------------------------- |
-| `createS3Adapter(config)`  | Create S3 adapter     | `bucket`, `region`, `accessKeyId`, `secretAccessKey`                               |
-| `createOSSAdapter(config)` | Create OSS adapter    | `bucket`, `region`, `accessKeyId`, `accessKeySecret`                              |
-| `createCOSAdapter(config)` | Create COS adapter    | `bucket`, `region`, `secretId`, `secretKey`                                       |
+| API                        | Description        | Config parameters                                    |
+| -------------------------- | ------------------ | ---------------------------------------------------- |
+| `createS3Adapter(config)`  | Create S3 adapter  | `bucket`, `region`, `accessKeyId`, `secretAccessKey` |
+| `createOSSAdapter(config)` | Create OSS adapter | `bucket`, `region`, `accessKeyId`, `accessKeySecret` |
+| `createCOSAdapter(config)` | Create COS adapter | `bucket`, `region`, `secretId`, `secretKey`          |
 
 ### Client module (@dreamer/upload/client)
 
-| API                          | Description           | Returns                     |
-| ----------------------------- | --------------------- | --------------------------- |
-| `new UploadClient(config)`    | Create upload client  | `UploadClient`              |
-| `createUploadClient(config)`  | Factory function      | `UploadClient`              |
-| `client.setToken(token)`     | Set auth token        | `void`                      |
-| `client.setHeaders(headers)` | Set request headers   | `void`                      |
-| `client.upload(file, options?)` | Upload file        | `Promise<UploadResult>`     |
-| `client.pause(uploadId)`     | Pause upload          | `void`                      |
-| `client.resume(uploadId)`    | Resume upload         | `Promise<UploadResult>`     |
-| `client.cancel(uploadId)`    | Cancel upload         | `void`                      |
-| `client.getPendingUploads()` | Get incomplete uploads| `Promise<UploadState[]>`    |
-| `client.cleanup(maxAge?)`    | Clean expired state   | `void`                      |
-| `formatSize(bytes)`          | Format file size      | `string`                    |
-| `calculateFileHash(data)`    | Compute file hash     | `Promise<string>`           |
+| API                             | Description            | Returns                  |
+| ------------------------------- | ---------------------- | ------------------------ |
+| `new UploadClient(config)`      | Create upload client   | `UploadClient`           |
+| `createUploadClient(config)`    | Factory function       | `UploadClient`           |
+| `client.setToken(token)`        | Set auth token         | `void`                   |
+| `client.setHeaders(headers)`    | Set request headers    | `void`                   |
+| `client.upload(file, options?)` | Upload file            | `Promise<UploadResult>`  |
+| `client.pause(uploadId)`        | Pause upload           | `void`                   |
+| `client.resume(uploadId)`       | Resume upload          | `Promise<UploadResult>`  |
+| `client.cancel(uploadId)`       | Cancel upload          | `void`                   |
+| `client.getPendingUploads()`    | Get incomplete uploads | `Promise<UploadState[]>` |
+| `client.cleanup(maxAge?)`       | Clean expired state    | `void`                   |
+| `formatSize(bytes)`             | Format file size       | `string`                 |
+| `calculateFileHash(data)`       | Compute file hash      | `Promise<string>`        |
 
 **UploadClientConfig options:**
 
 | Option           | Type                     | Default | Description                    |
 | ---------------- | ------------------------ | ------- | ------------------------------ |
-| `endpoint`       | `string`                 | -       | Upload endpoint URL (required)|
+| `endpoint`       | `string`                 | -       | Upload endpoint URL (required) |
 | `chunkSize`      | `number`                 | 5MB     | Chunk size                     |
-| `concurrency`    | `number`                 | 3       | Concurrency count             |
+| `concurrency`    | `number`                 | 3       | Concurrency count              |
 | `retries`        | `number`                 | 3       | Retry count                    |
-| `retryDelay`     | `number`                 | 1000    | Retry delay (ms)              |
-| `timeout`        | `number`                 | 30000   | Request timeout (ms)          |
+| `retryDelay`     | `number`                 | 1000    | Retry delay (ms)               |
+| `timeout`        | `number`                 | 30000   | Request timeout (ms)           |
 | `headers`        | `Record<string, string>` | -       | Custom headers                 |
 | `token`          | `string`                 | -       | Auth token                     |
 | `persistState`   | `boolean`                | false   | Whether to persist state       |
-| `stateKeyPrefix` | `string`                 | -       | State storage key prefix      |
+| `stateKeyPrefix` | `string`                 | -       | State storage key prefix       |
 
 ### Server module (@dreamer/upload/server)
 
-| API                                | Description              | Returns                       |
-| ---------------------------------- | ------------------------ | ----------------------------- |
-| `new MultipartUploadHandler(config)` | Create handler        | `MultipartUploadHandler`      |
+| API                                  | Description                  | Returns                     |
+| ------------------------------------ | ---------------------------- | --------------------------- |
+| `new MultipartUploadHandler(config)` | Create handler               | `MultipartUploadHandler`    |
 | `handler.handle(request, basePath)`  | Unified handle (recommended) | `Promise<Response \| null>` |
-| `handler.handleInit(request)`     | Handle init request      | `Promise<Response>`           |
-| `handler.handleChunk(request)`    | Handle chunk upload      | `Promise<Response>`           |
-| `handler.handleComplete(request)`  | Handle complete          | `Promise<Response>`           |
-| `handler.handleAbort(request)`    | Handle abort             | `Promise<Response>`           |
-| `handler.handleStatus(request)`   | Handle status query      | `Promise<Response>`           |
+| `handler.handleInit(request)`        | Handle init request          | `Promise<Response>`         |
+| `handler.handleChunk(request)`       | Handle chunk upload          | `Promise<Response>`         |
+| `handler.handleComplete(request)`    | Handle complete              | `Promise<Response>`         |
+| `handler.handleAbort(request)`       | Handle abort                 | `Promise<Response>`         |
+| `handler.handleStatus(request)`      | Handle status query          | `Promise<Response>`         |
 
 **MultipartUploadHandlerConfig options:**
 
-| Option             | Type                                  | Default | Description                |
-| ------------------ | ------------------------------------- | ------- | -------------------------- |
-| `storage`          | `CloudStorageAdapter`                 | -       | Storage adapter (required)|
-| `maxPartSize`      | `number`                              | 100MB   | Max part size             |
-| `maxFileSize`      | `number`                              | 5GB     | Max file size             |
-| `allowedMimeTypes` | `string[]`                            | []      | Allowed MIME types        |
-| `pathPrefix`       | `string`                              | ""      | Upload path prefix        |
-| `generatePath`     | `(filename, meta) => string`          | -       | Custom path generator     |
-| `validate`         | `(filename, size, mime) => boolean`   | -       | Custom validation function |
+| Option             | Type                                | Default | Description                |
+| ------------------ | ----------------------------------- | ------- | -------------------------- |
+| `storage`          | `CloudStorageAdapter`               | -       | Storage adapter (required) |
+| `maxPartSize`      | `number`                            | 100MB   | Max part size              |
+| `maxFileSize`      | `number`                            | 5GB     | Max file size              |
+| `allowedMimeTypes` | `string[]`                          | []      | Allowed MIME types         |
+| `pathPrefix`       | `string`                            | ""      | Upload path prefix         |
+| `generatePath`     | `(filename, meta) => string`        | -       | Custom path generator      |
+| `validate`         | `(filename, size, mime) => boolean` | -       | Custom validation function |
 
 ---
 
@@ -572,7 +580,8 @@ See [TEST_REPORT.md](docs/en-US/TEST_REPORT.md) for the full test report.
 - **Server vs client**: Clearly separated via `/client` and `/server` subpaths
 - **Unified interface**: All storage adapters implement `CloudStorageAdapter`
 - **Cross-runtime**: Uses `@dreamer/runtime-adapter` for Deno/Bun
-- **S3-compatible mode**: OSS and COS adapters support S3-compatible mode (e.g. MinIO for testing)
+- **S3-compatible mode**: OSS and COS adapters support S3-compatible mode (e.g.
+  MinIO for testing)
 - **Part size**: S3/MinIO require at least 5MB per part (except the last)
 - **Type safety**: Full TypeScript with complete type definitions for all APIs
 
@@ -580,9 +589,14 @@ See [TEST_REPORT.md](docs/en-US/TEST_REPORT.md) for the full test report.
 
 ## Changelog
 
-### [1.0.0] - 2026-02-20
+### [1.0.1] - 2026-03-27
 
-- **Added**: Initial stable release. Uploader, StorageManager, multi-cloud adapters (S3, OSS, COS), multipart & resumable upload, UploadClient, MultipartUploadHandler, utilities (filename, MIME, validation, hash), i18n (en-US, zh-CN). Compatible with Deno 2.6+, Bun 1.3.5+, and browser (client).
+- **Added**: **`LocalCloudStorageAdapter`** /
+  **`createLocalCloudStorageAdapter`** (`@dreamer/upload/adapters`) — local-disk
+  **`CloudStorageAdapter`** with multipart staging for
+  **`MultipartUploadHandler`**. **`package.json`** aligned with **`deno.json`**
+  exports.
+- **Changed**: CI publish uses **`npx jsr publish`**; **`.gitignore`** updates.
 
 Full history: [CHANGELOG](docs/en-US/CHANGELOG.md).
 

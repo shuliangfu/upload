@@ -7,12 +7,12 @@
  */
 
 import {
-  Uploader,
-  LocalStorage,
-  validateFile,
+  createFileResponse,
   formatFileSize,
   generateDateSubdir,
-  createFileResponse,
+  LocalStorage,
+  Uploader,
+  validateFile,
 } from "../src/mod.ts";
 
 // ============================================================================
@@ -39,7 +39,15 @@ const uploader = new Uploader({
   validation: {
     maxFileSize: 50 * 1024 * 1024, // 50MB
     allowedMimeTypes: ["image/*", "video/*", "application/pdf"],
-    allowedExtensions: [".jpg", ".jpeg", ".png", ".gif", ".webp", ".mp4", ".pdf"],
+    allowedExtensions: [
+      ".jpg",
+      ".jpeg",
+      ".png",
+      ".gif",
+      ".webp",
+      ".mp4",
+      ".pdf",
+    ],
   },
   // 按日期分目录
   generateSubdir: generateDateSubdir,
@@ -67,7 +75,7 @@ async function handleUpload(request: Request): Promise<Response> {
   if (!contentType.includes("multipart/form-data")) {
     return Response.json(
       { success: false, error: "请使用 multipart/form-data 格式上传" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -81,7 +89,7 @@ async function handleUpload(request: Request): Promise<Response> {
     if (!result.success) {
       return Response.json(
         { success: false, error: result.error },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -104,7 +112,7 @@ async function handleUpload(request: Request): Promise<Response> {
     console.error("上传错误:", error);
     return Response.json(
       { success: false, error: (error as Error).message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -119,18 +127,19 @@ async function handleRawUpload(request: Request): Promise<Response> {
   try {
     // 获取文件名
     const filename = request.headers.get("x-filename") || "upload";
-    const mimeType = request.headers.get("content-type") || "application/octet-stream";
+    const mimeType = request.headers.get("content-type") ||
+      "application/octet-stream";
 
     // 验证文件类型
     const validation = validateFile(
       { name: filename, type: mimeType, size: 0 },
-      uploader.getValidation()
+      uploader.getValidation(),
     );
 
     if (!validation.valid) {
       return Response.json(
         { success: false, error: validation.error },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -156,7 +165,7 @@ async function handleRawUpload(request: Request): Promise<Response> {
     console.error("上传错误:", error);
     return Response.json(
       { success: false, error: (error as Error).message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -186,7 +195,7 @@ async function handleFileAccess(filename: string): Promise<Response> {
     if (!filePath) {
       return Response.json(
         { success: false, error: "文件不存在" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -199,7 +208,7 @@ async function handleFileAccess(filename: string): Promise<Response> {
     console.error("文件访问错误:", error);
     return Response.json(
       { success: false, error: (error as Error).message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -217,7 +226,7 @@ async function handleFileDelete(filename: string): Promise<Response> {
     if (!await storage.exists(filePath)) {
       return Response.json(
         { success: false, error: "文件不存在" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -228,7 +237,7 @@ async function handleFileDelete(filename: string): Promise<Response> {
     console.error("删除错误:", error);
     return Response.json(
       { success: false, error: (error as Error).message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -284,7 +293,7 @@ async function handler(request: Request): Promise<Response> {
     // 404
     response = Response.json(
       { error: "Not Found", path },
-      { status: 404 }
+      { status: 404 },
     );
   }
 

@@ -5,12 +5,12 @@
  */
 
 import {
-  LocalStorage,
+  computeHash,
+  computeShortHash,
   createLocalStorage,
   generateDateSubdir,
   generateMonthSubdir,
-  computeHash,
-  computeShortHash,
+  LocalStorage,
 } from "../src/mod.ts";
 
 // ============================================================================
@@ -36,7 +36,10 @@ console.log("读取内容:", new TextDecoder().decode(retrieved));
 
 // 检查是否存在
 console.log("文件存在:", await storage.exists("./test-uploads/test/hello.txt"));
-console.log("不存在的文件:", await storage.exists("./test-uploads/test/notfound.txt"));
+console.log(
+  "不存在的文件:",
+  await storage.exists("./test-uploads/test/notfound.txt"),
+);
 
 // 删除文件
 await storage.delete("./test-uploads/test/hello.txt");

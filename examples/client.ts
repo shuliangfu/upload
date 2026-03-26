@@ -7,8 +7,8 @@
  */
 
 import {
-  UploadClient,
   createUploadClient,
+  UploadClient,
   type UploadProgress,
   type UploadResult,
   type UploadState,
@@ -54,9 +54,9 @@ console.log("=== 创建上传客户端 ===\n");
 const client = new UploadClient({
   endpoint: "http://localhost:3000/upload",
   chunkSize: 5 * 1024 * 1024, // 5MB 分片
-  concurrency: 3,             // 3 并发
-  retries: 3,                 // 重试 3 次
-  timeout: 30000,             // 30 秒超时
+  concurrency: 3, // 3 并发
+  retries: 3, // 重试 3 次
+  timeout: 30000, // 30 秒超时
   headers: {
     "X-Client": "deno-upload-client",
   },
@@ -79,7 +79,9 @@ console.log("工厂函数创建成功");
 console.log("\n=== 简单上传示例 ===\n");
 
 // 创建测试文件
-const testContent = new TextEncoder().encode("Hello, World! 这是测试文件内容。");
+const testContent = new TextEncoder().encode(
+  "Hello, World! 这是测试文件内容。",
+);
 const testFile = new File([testContent], "test.txt", { type: "text/plain" });
 
 console.log("测试文件:");
@@ -136,9 +138,9 @@ function onProgress(progress: UploadProgress): void {
 
   console.log(
     `[${bar}] ${progress.percentage.toFixed(1)}% ` +
-    `(${formatSize(progress.loaded)}/${formatSize(progress.total)}) ` +
-    `速度: ${formatSize(progress.speed)}/s ` +
-    `分片: ${progress.completedChunks}/${progress.totalChunks}`
+      `(${formatSize(progress.loaded)}/${formatSize(progress.total)}) ` +
+      `速度: ${formatSize(progress.speed)}/s ` +
+      `分片: ${progress.completedChunks}/${progress.totalChunks}`,
   );
 }
 
@@ -213,7 +215,7 @@ console.log("=== 断点续传示例 ===\n");
 const _resumableClient = new UploadClient({
   endpoint: "http://localhost:3000/upload",
   chunkSize: 1024 * 1024, // 1MB 分片
-  persistState: true,     // 启用状态持久化
+  persistState: true, // 启用状态持久化
   stateKeyPrefix: "upload_", // 状态存储键前缀
 });
 
@@ -261,7 +263,8 @@ console.log("=== 状态变化回调示例 ===\n");
  * @param state - 上传状态
  */
 function onStateChange(state: UploadState): void {
-  const completedChunks = state.chunks.filter(c => c.status === "completed").length;
+  const completedChunks =
+    state.chunks.filter((c) => c.status === "completed").length;
   const totalChunks = state.chunks.length;
 
   console.log(`状态变化: ${state.status}`);
@@ -302,7 +305,7 @@ console.log("\n=== 完整上传流程示例 ===\n");
  */
 async function uploadFileWithFullFeatures(
   file: File,
-  uploadClient: UploadClient
+  uploadClient: UploadClient,
 ): Promise<UploadResult> {
   console.log(`开始上传: ${file.name}`);
   console.log(`文件大小: ${formatSize(file.size)}`);
@@ -334,9 +337,9 @@ async function uploadFileWithFullFeatures(
 
       console.log(
         `进度: ${progress.percentage.toFixed(1)}% | ` +
-        `已传: ${formatSize(progress.loaded)} | ` +
-        `速度: ${formatSize(currentSpeed)}/s | ` +
-        `状态: ${progress.status}`
+          `已传: ${formatSize(progress.loaded)} | ` +
+          `速度: ${formatSize(currentSpeed)}/s | ` +
+          `状态: ${progress.status}`,
       );
 
       lastLoaded = progress.loaded;
@@ -345,10 +348,12 @@ async function uploadFileWithFullFeatures(
 
     // 状态变化回调
     onStateChange: (state: UploadState) => {
-      const completedChunks = state.chunks.filter(c => c.status === "completed").length;
+      const completedChunks = state.chunks.filter((c) =>
+        c.status === "completed"
+      ).length;
       console.log(
         `分片进度: ${completedChunks}/${state.chunks.length} | ` +
-        `状态: ${state.status}`
+          `状态: ${state.status}`,
       );
     },
   });

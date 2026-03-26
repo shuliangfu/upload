@@ -5,13 +5,13 @@
  */
 
 import {
-  Uploader,
-  LocalStorage,
-  validateFile,
-  generateFilename,
   formatFileSize,
-  getMimeType,
+  generateFilename,
   getFileExtension,
+  getMimeType,
+  LocalStorage,
+  Uploader,
+  validateFile,
 } from "../src/mod.ts";
 
 // ============================================================================
@@ -61,7 +61,11 @@ const result2 = validateFile(file2, {
 console.log("video.mp4 验证:", result2);
 
 // 验证失败：不允许的类型
-const file3 = { name: "script.exe", type: "application/x-executable", size: 1024 };
+const file3 = {
+  name: "script.exe",
+  type: "application/x-executable",
+  size: 1024,
+};
 const result3 = validateFile(file3, {
   allowedMimeTypes: ["image/*", "application/pdf"],
 });

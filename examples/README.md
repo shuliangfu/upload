@@ -4,15 +4,15 @@
 
 ## 示例列表
 
-| 文件 | 说明 |
-|------|------|
-| [basic.ts](./basic.ts) | 基础用法：工具函数、文件验证、上传处理器 |
-| [validation.ts](./validation.ts) | 文件验证：大小、类型、扩展名、安全检查 |
-| [storage.ts](./storage.ts) | 存储适配器：本地存储、自定义适配器 |
-| [multipart.ts](./multipart.ts) | 分片上传：大文件上传、断点续传 |
-| [cloud.ts](./cloud.ts) | 云存储：AWS S3、阿里云 OSS、腾讯云 COS |
-| [server.ts](./server.ts) | 服务端：HTTP 上传服务器示例 |
-| [client.ts](./client.ts) | 客户端：使用 UploadClient 上传文件 |
+| 文件                             | 说明                                     |
+| -------------------------------- | ---------------------------------------- |
+| [basic.ts](./basic.ts)           | 基础用法：工具函数、文件验证、上传处理器 |
+| [validation.ts](./validation.ts) | 文件验证：大小、类型、扩展名、安全检查   |
+| [storage.ts](./storage.ts)       | 存储适配器：本地存储、自定义适配器       |
+| [multipart.ts](./multipart.ts)   | 分片上传：大文件上传、断点续传           |
+| [cloud.ts](./cloud.ts)           | 云存储：AWS S3、阿里云 OSS、腾讯云 COS   |
+| [server.ts](./server.ts)         | 服务端：HTTP 上传服务器示例              |
+| [client.ts](./client.ts)         | 客户端：使用 UploadClient 上传文件       |
 
 ## 运行示例
 

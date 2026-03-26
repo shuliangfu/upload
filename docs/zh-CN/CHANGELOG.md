@@ -7,6 +7,29 @@
 
 ---
 
+## [1.0.1] - 2026-03-27
+
+### 新增
+
+- **`LocalCloudStorageAdapter`（`src/adapters/local-cloud.ts`）**：本地磁盘完整实现
+  **`CloudStorageAdapter`**，在无 S3/OSS/COS 时仍可配合
+  **`MultipartUploadHandler`** 做分片；分片暂存
+  **`baseDir/.staging/<uploadId>/`**，合并后写入 **`baseDir/<key>`**； 可选
+  **`publicFileBasePath`** 供 **`getPresignedUrl`**。由
+  **`@dreamer/upload/adapters`** 导出
+  **`createLocalCloudStorageAdapter`**、**`LocalCloudStorageAdapter`**、
+  **`LocalCloudStorageConfig`**。
+- **`package.json`**：与 **`deno.json`** 的 **`exports`** 及脚本对齐，便于
+  Bun/npm 侧使用。
+
+### 变更
+
+- **CI（`.github/workflows/publish.yml`）**：在推送 **`v*`** tag 时使用
+  **`npx jsr publish`** 发布。
+- **`.gitignore`**：补充测试数据、快照与覆盖率等忽略项。
+
+---
+
 ## [1.0.0] - 2026-02-20
 
 ### 新增
@@ -15,8 +38,11 @@
 
 #### 主模块（`@dreamer/upload`）
 
-- **Uploader**：`createUploader`、`Uploader` 类；`handleFormData` 处理服务端表单上传，支持校验（最大大小、MIME、扩展名）。
-- **StorageManager**：`new StorageManager(config)`、`createStorageManagerFromEnv()`；统一 API：`upload`、`download`、`exists`、`delete`、`list`、`getPublicUrl`；支持 `local`、`s3`、`oss`、`cos` 后端。
+- **Uploader**：`createUploader`、`Uploader` 类；`handleFormData`
+  处理服务端表单上传，支持校验（最大大小、MIME、扩展名）。
+- **StorageManager**：`new StorageManager(config)`、`createStorageManagerFromEnv()`；统一
+  API：`upload`、`download`、`exists`、`delete`、`list`、`getPublicUrl`；支持
+  `local`、`s3`、`oss`、`cos` 后端。
 - **工具函数**：
   - 文件名：`getFileExtension`、`getBaseName`、`sanitizeFilename`、`generateFilename`、`generateTimestampFilename`、`getFilenameFromUrl`
   - MIME：`getMimeType`、`matchMimeType`
@@ -30,10 +56,14 @@
 
 #### 适配器（`@dreamer/upload/adapters`）
 
-- **CloudStorageAdapter** 接口：`upload`、`download`、`delete`、`exists`、`getMetadata`、`list`、`copy`、`getPresignedUrl`、`initiateMultipartUpload`、`uploadPart`、`completeMultipartUpload`、`abortMultipartUpload`、`listParts`。
-- **S3**：`createS3Adapter`、`S3StorageAdapter`；AWS Signature V4；路径样式与虚拟主机样式；兼容 MinIO。
-- **OSS**：`createOSSAdapter`、`OSSStorageAdapter`；阿里云原生签名；S3 兼容模式。
-- **COS**：`createCOSAdapter`、`COSStorageAdapter`；腾讯云原生签名；S3 兼容模式。
+- **CloudStorageAdapter**
+  接口：`upload`、`download`、`delete`、`exists`、`getMetadata`、`list`、`copy`、`getPresignedUrl`、`initiateMultipartUpload`、`uploadPart`、`completeMultipartUpload`、`abortMultipartUpload`、`listParts`。
+- **S3**：`createS3Adapter`、`S3StorageAdapter`；AWS Signature
+  V4；路径样式与虚拟主机样式；兼容 MinIO。
+- **OSS**：`createOSSAdapter`、`OSSStorageAdapter`；阿里云原生签名；S3
+  兼容模式。
+- **COS**：`createCOSAdapter`、`COSStorageAdapter`；腾讯云原生签名；S3
+  兼容模式。
 
 #### 分片上传（`@dreamer/upload/multipart`）
 
@@ -49,13 +79,16 @@
 
 #### 服务端（`@dreamer/upload/server`）
 
-- **MultipartUploadHandler**：`new MultipartUploadHandler(config)`、`createMultipartUploadHandler`；统一 `handle(request, basePath)` 处理 `/init`、`/chunk`、`/complete`、`/abort`、`/status`；单路由方法：`handleInit`、`handleChunk`、`handleComplete`、`handleAbort`、`handleStatus`。
+- **MultipartUploadHandler**：`new MultipartUploadHandler(config)`、`createMultipartUploadHandler`；统一
+  `handle(request, basePath)` 处理
+  `/init`、`/chunk`、`/complete`、`/abort`、`/status`；单路由方法：`handleInit`、`handleChunk`、`handleComplete`、`handleAbort`、`handleStatus`。
 - **类型**：`MultipartUploadHandlerConfig`、`InitRequest`、`InitResponse`、`ChunkRequest`、`ChunkResponse`、`CompleteRequest`、`CompleteResponse`、`AbortRequest`、`UploadStatus`。
 - 文件大小与 MIME 校验；自定义路径生成与校验；路径前缀支持。
 
 #### 国际化（i18n）
 
-- 服务端文案（如 S3/COS 上传或删除失败、文件不存在等）提供 **en-US** 与 **zh-CN**，基于 `@dreamer/i18n`。
+- 服务端文案（如 S3/COS 上传或删除失败、文件不存在等）提供 **en-US** 与
+  **zh-CN**，基于 `@dreamer/i18n`。
 - 语言由环境变量决定：`LANGUAGE`、`LC_ALL`、`LANG`。
 - 从 `@dreamer/upload/i18n` 导出：`$tr`、`setUploadLocale`、`detectLocale`。
 

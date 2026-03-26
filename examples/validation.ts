@@ -5,17 +5,17 @@
  */
 
 import {
-  validateFile,
-  validateFiles,
-  isPathSafe,
-  sanitizeFilename,
-  isImage,
-  isVideo,
+  getMimeType,
+  isArchive,
   isAudio,
   isDocument,
-  isArchive,
   isHiddenFile,
-  getMimeType,
+  isImage,
+  isPathSafe,
+  isVideo,
+  sanitizeFilename,
+  validateFile,
+  validateFiles,
 } from "../src/mod.ts";
 
 // ============================================================================
@@ -25,16 +25,19 @@ import {
 console.log("=== 文件大小验证 ===\n");
 
 const files = [
-  { name: "small.jpg", type: "image/jpeg", size: 100 * 1024 },      // 100KB
+  { name: "small.jpg", type: "image/jpeg", size: 100 * 1024 }, // 100KB
   { name: "medium.jpg", type: "image/jpeg", size: 5 * 1024 * 1024 }, // 5MB
-  { name: "large.mp4", type: "video/mp4", size: 50 * 1024 * 1024 },  // 50MB
+  { name: "large.mp4", type: "video/mp4", size: 50 * 1024 * 1024 }, // 50MB
 ];
 
 for (const file of files) {
   const result = validateFile(file, {
     maxFileSize: 10 * 1024 * 1024, // 10MB 限制
   });
-  console.log(`${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB):`, result);
+  console.log(
+    `${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB):`,
+    result,
+  );
 }
 
 // ============================================================================
@@ -110,7 +113,7 @@ const batchFiles = [
 const batchResult = validateFiles(
   batchFiles,
   { allowedMimeTypes: ["image/*"] },
-  5 * 1024 * 1024 // 总大小限制 5MB
+  5 * 1024 * 1024, // 总大小限制 5MB
 );
 
 console.log("批量验证结果:", batchResult);
@@ -188,11 +191,11 @@ console.log("\n=== 路径安全检查 ===\n");
 
 const basePath = "/var/www/uploads";
 const paths = [
-  "images/photo.jpg",           // 安全
-  "documents/2024/01/doc.pdf",   // 安全
-  "../../../etc/passwd",          // 危险：路径遍历
-  "/etc/passwd",                  // 危险：绝对路径
-  "images/../../../root",         // 危险：隐藏遍历
+  "images/photo.jpg", // 安全
+  "documents/2024/01/doc.pdf", // 安全
+  "../../../etc/passwd", // 危险：路径遍历
+  "/etc/passwd", // 危险：绝对路径
+  "images/../../../root", // 危险：隐藏遍历
 ];
 
 for (const path of paths) {

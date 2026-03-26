@@ -1,8 +1,10 @@
 # @dreamer/upload
 
-> 一个兼容 Deno 和 Bun 的完整的文件上传解决方案，支持分片上传、断点续传、多云存储适配
+> 一个兼容 Deno 和 Bun
+> 的完整的文件上传解决方案，支持分片上传、断点续传、多云存储适配
 
-**English**: [README](../../README.md) · **客户端文档**: [README](client/README.md)
+**English**: [README](../../README.md) · **客户端文档**:
+[README](client/README.md)
 
 [![JSR](https://jsr.io/badges/@dreamer/upload)](https://jsr.io/@dreamer/upload)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](../../LICENSE)
@@ -12,9 +14,11 @@
 
 ## 🎯 功能
 
-完整的文件上传包，提供客户端、服务端和云存储适配器全链路解决方案。纯 TypeScript 实现，支持分片上传、断点续传、文件安全扫描等企业级功能，适用于文件管理系统、云存储应用、内容管理平台等场景。
+完整的文件上传包，提供客户端、服务端和云存储适配器全链路解决方案。纯 TypeScript
+实现，支持分片上传、断点续传、文件安全扫描等企业级功能，适用于文件管理系统、云存储应用、内容管理平台等场景。
 
 核心功能：
+
 - **多云存储**: 支持 AWS S3、阿里云 OSS、腾讯云 COS、本地存储
 - **分片上传**: 大文件自动分片，支持并发上传和断点续传
 - **安全扫描**: 文件类型检测、病毒扫描、敏感内容识别
@@ -110,10 +114,10 @@ import { UploadClient } from "@dreamer/upload/client";
 
 ```typescript
 import {
-  Uploader,
-  validateFile,
   generateFilename,
   getMimeType,
+  Uploader,
+  validateFile,
 } from "@dreamer/upload";
 
 // 创建上传处理器
@@ -133,7 +137,7 @@ console.log("上传结果:", result);
 ### 客户端基础示例
 
 ```typescript
-import { UploadClient, createUploadClient } from "@dreamer/upload/client";
+import { createUploadClient, UploadClient } from "@dreamer/upload/client";
 
 // 创建上传客户端
 const client = createUploadClient({
@@ -162,9 +166,9 @@ if (result.success) {
 
 ```typescript
 import {
-  createS3Adapter,
-  createOSSAdapter,
   createCOSAdapter,
+  createOSSAdapter,
+  createS3Adapter,
 } from "@dreamer/upload/adapters";
 
 // AWS S3
@@ -208,10 +212,13 @@ const url = await s3.getPresignedUrl("path/to/file.jpg", {
 ### 分片上传
 
 ```typescript
-import { MultipartUploader, getRecommendedPartSize } from "@dreamer/upload/multipart";
+import {
+  getRecommendedPartSize,
+  MultipartUploader,
+} from "@dreamer/upload/multipart";
 import { createS3Adapter } from "@dreamer/upload/adapters";
 
-const adapter = createS3Adapter({ /* ... */ });
+const adapter = createS3Adapter({/* ... */});
 
 // 计算推荐分片大小
 const partSize = getRecommendedPartSize(fileSize);
@@ -233,7 +240,7 @@ const result = await uploader.upload("large-file.zip", fileData, {
 ### 客户端高级用法
 
 ```typescript
-import { UploadClient, formatSize } from "@dreamer/upload/client";
+import { formatSize, UploadClient } from "@dreamer/upload/client";
 
 const client = new UploadClient({
   endpoint: "https://api.example.com/upload",
@@ -250,7 +257,9 @@ client.setToken("your-auth-token");
 const result = await client.upload(file, {
   filename: "example.jpg",
   onProgress: (progress) => {
-    console.log(`${progress.percentage}% - 速度: ${formatSize(progress.speed)}/s`);
+    console.log(
+      `${progress.percentage}% - 速度: ${formatSize(progress.speed)}/s`,
+    );
     console.log(`剩余时间: ${progress.remainingTime}s`);
   },
   onStateChange: (state) => {
@@ -278,13 +287,13 @@ import { MultipartUploadHandler } from "@dreamer/upload/server";
 import { createS3Adapter } from "@dreamer/upload/adapters";
 import { serve } from "@dreamer/runtime-adapter";
 
-const adapter = createS3Adapter({ /* ... */ });
+const adapter = createS3Adapter({/* ... */});
 
 // 创建处理器
 const handler = new MultipartUploadHandler({
   storage: adapter,
   maxFileSize: 100 * 1024 * 1024, // 100MB
-  maxPartSize: 10 * 1024 * 1024,  // 10MB
+  maxPartSize: 10 * 1024 * 1024, // 10MB
   allowedMimeTypes: ["image/*", "video/*"],
   pathPrefix: "uploads",
 });
@@ -302,7 +311,7 @@ serve({ port: 3000 }, async (request) => {
 ### 统一存储管理
 
 ```typescript
-import { StorageManager, createStorageManagerFromEnv } from "@dreamer/upload";
+import { createStorageManagerFromEnv, StorageManager } from "@dreamer/upload";
 
 // 方式1：手动配置
 const storage = new StorageManager({
@@ -333,39 +342,33 @@ const url = await storage.getPublicUrl("path/to/file.jpg");
 
 ```typescript
 import {
-  // 文件名处理
-  getFileExtension,
-  getBaseName,
-  sanitizeFilename,
-  generateFilename,
-  generateTimestampFilename,
-
-  // MIME 类型
-  getMimeType,
-  matchMimeType,
-
-  // 文件类型检测
-  isImage,
-  isVideo,
-  isAudio,
-  isDocument,
-  isArchive,
-
-  // 验证
-  validateFile,
-  validateFiles,
-  isPathSafe,
-
   // 哈希计算
   computeHash,
   computeShortHash,
-
   // 格式化
   formatFileSize,
-
   // 子目录生成
   generateDateSubdir,
+  generateFilename,
   generateMonthSubdir,
+  generateTimestampFilename,
+  getBaseName,
+  // 文件名处理
+  getFileExtension,
+  // MIME 类型
+  getMimeType,
+  isArchive,
+  isAudio,
+  isDocument,
+  // 文件类型检测
+  isImage,
+  isPathSafe,
+  isVideo,
+  matchMimeType,
+  sanitizeFilename,
+  // 验证
+  validateFile,
+  validateFiles,
 } from "@dreamer/upload";
 
 // 文件名处理
@@ -412,120 +415,120 @@ const subdir = generateDateSubdir(); // "2026/01/30"
 
 #### 上传处理器
 
-| API                                  | 说明                 | 返回值                  |
-| ------------------------------------ | -------------------- | ----------------------- |
-| `new Uploader(config)`               | 创建上传处理器       | `Uploader`              |
-| `uploader.handleFormData(formData)`  | 处理 FormData 上传   | `Promise<UploadResult>` |
+| API                                 | 说明               | 返回值                  |
+| ----------------------------------- | ------------------ | ----------------------- |
+| `new Uploader(config)`              | 创建上传处理器     | `Uploader`              |
+| `uploader.handleFormData(formData)` | 处理 FormData 上传 | `Promise<UploadResult>` |
 
 #### 存储管理器
 
-| API                                    | 说明           | 返回值                          |
-| -------------------------------------- | -------------- | ------------------------------- |
-| `new StorageManager(config)`           | 创建存储管理器 | `StorageManager`                |
-| `createStorageManagerFromEnv()`        | 从环境变量创建 | `StorageManager`                |
-| `storage.upload(key, data, options?)`  | 上传文件       | `Promise<UploadedFileInfo>`     |
-| `storage.download(key)`                | 下载文件       | `Promise<Uint8Array>`           |
-| `storage.exists(key)`                  | 检查是否存在   | `Promise<boolean>`              |
-| `storage.delete(key)`                  | 删除文件       | `Promise<void>`                 |
-| `storage.list(prefix?, options?)`      | 列出文件       | `Promise<ListResult>`           |
-| `storage.getPublicUrl(key)`            | 获取公开 URL   | `Promise<string>`               |
+| API                                   | 说明           | 返回值                      |
+| ------------------------------------- | -------------- | --------------------------- |
+| `new StorageManager(config)`          | 创建存储管理器 | `StorageManager`            |
+| `createStorageManagerFromEnv()`       | 从环境变量创建 | `StorageManager`            |
+| `storage.upload(key, data, options?)` | 上传文件       | `Promise<UploadedFileInfo>` |
+| `storage.download(key)`               | 下载文件       | `Promise<Uint8Array>`       |
+| `storage.exists(key)`                 | 检查是否存在   | `Promise<boolean>`          |
+| `storage.delete(key)`                 | 删除文件       | `Promise<void>`             |
+| `storage.list(prefix?, options?)`     | 列出文件       | `Promise<ListResult>`       |
+| `storage.getPublicUrl(key)`           | 获取公开 URL   | `Promise<string>`           |
 
 #### 工具函数
 
-| API                                      | 说明                 | 返回值                   |
-| ---------------------------------------- | -------------------- | ------------------------ |
-| `getFileExtension(filename)`             | 获取文件扩展名       | `string`                 |
-| `getBaseName(filename)`                  | 获取文件基本名       | `string`                 |
-| `sanitizeFilename(filename)`             | 安全过滤文件名       | `string`                 |
-| `generateFilename(filename)`             | 生成唯一文件名       | `string`                 |
-| `generateTimestampFilename(filename)`    | 生成时间戳文件名     | `string`                 |
-| `getMimeType(filename)`                  | 获取 MIME 类型       | `string`                 |
-| `matchMimeType(mimeType, pattern)`       | 匹配 MIME 类型       | `boolean`                |
-| `isImage(filename)`                      | 检查是否为图片       | `boolean`                |
-| `isVideo(filename)`                      | 检查是否为视频       | `boolean`                |
-| `isAudio(filename)`                      | 检查是否为音频       | `boolean`                |
-| `isDocument(filename)`                   | 检查是否为文档       | `boolean`                |
-| `isArchive(filename)`                    | 检查是否为压缩文件   | `boolean`                |
-| `validateFile(file, options)`            | 验证单个文件         | `FileValidationResult`   |
-| `validateFiles(files, options)`          | 验证多个文件         | `FileValidationResult[]` |
-| `isPathSafe(path)`                       | 检查路径是否安全     | `boolean`                |
-| `computeHash(data)`                      | 计算 SHA-256 哈希    | `Promise<string>`        |
-| `computeShortHash(data, length)`         | 计算短哈希           | `Promise<string>`        |
-| `formatFileSize(bytes)`                  | 格式化文件大小       | `string`                 |
-| `generateDateSubdir()`                   | 生成日期格式子目录   | `string`                 |
-| `generateMonthSubdir()`                  | 生成月份格式子目录   | `string`                 |
+| API                                   | 说明               | 返回值                   |
+| ------------------------------------- | ------------------ | ------------------------ |
+| `getFileExtension(filename)`          | 获取文件扩展名     | `string`                 |
+| `getBaseName(filename)`               | 获取文件基本名     | `string`                 |
+| `sanitizeFilename(filename)`          | 安全过滤文件名     | `string`                 |
+| `generateFilename(filename)`          | 生成唯一文件名     | `string`                 |
+| `generateTimestampFilename(filename)` | 生成时间戳文件名   | `string`                 |
+| `getMimeType(filename)`               | 获取 MIME 类型     | `string`                 |
+| `matchMimeType(mimeType, pattern)`    | 匹配 MIME 类型     | `boolean`                |
+| `isImage(filename)`                   | 检查是否为图片     | `boolean`                |
+| `isVideo(filename)`                   | 检查是否为视频     | `boolean`                |
+| `isAudio(filename)`                   | 检查是否为音频     | `boolean`                |
+| `isDocument(filename)`                | 检查是否为文档     | `boolean`                |
+| `isArchive(filename)`                 | 检查是否为压缩文件 | `boolean`                |
+| `validateFile(file, options)`         | 验证单个文件       | `FileValidationResult`   |
+| `validateFiles(files, options)`       | 验证多个文件       | `FileValidationResult[]` |
+| `isPathSafe(path)`                    | 检查路径是否安全   | `boolean`                |
+| `computeHash(data)`                   | 计算 SHA-256 哈希  | `Promise<string>`        |
+| `computeShortHash(data, length)`      | 计算短哈希         | `Promise<string>`        |
+| `formatFileSize(bytes)`               | 格式化文件大小     | `string`                 |
+| `generateDateSubdir()`                | 生成日期格式子目录 | `string`                 |
+| `generateMonthSubdir()`               | 生成月份格式子目录 | `string`                 |
 
 ### 适配器模块 (@dreamer/upload/adapters)
 
 #### CloudStorageAdapter 接口
 
-| API                                                            | 说明           | 返回值                         |
-| -------------------------------------------------------------- | -------------- | ------------------------------ |
-| `upload(key, data, options?)`                                  | 上传文件       | `Promise<void>`                |
-| `download(key, options?)`                                      | 下载文件       | `Promise<Uint8Array>`          |
-| `delete(key)`                                                  | 删除文件       | `Promise<void>`                |
-| `exists(key)`                                                  | 检查是否存在   | `Promise<boolean>`             |
-| `getMetadata(key)`                                             | 获取元数据     | `Promise<ObjectMetadata>`      |
-| `list(prefix?, options?)`                                      | 列出对象       | `Promise<ListResult>`          |
-| `copy(sourceKey, destKey, options?)`                           | 复制对象       | `Promise<void>`                |
-| `getPresignedUrl(key, options?)`                               | 生成预签名 URL | `Promise<string>`              |
-| `initiateMultipartUpload(key, options?)`                       | 初始化分片上传 | `Promise<MultipartUploadInit>` |
-| `uploadPart(key, uploadId, partNumber, data)`                  | 上传分片       | `Promise<UploadPartResult>`    |
-| `completeMultipartUpload(key, uploadId, parts)`                | 完成分片上传   | `Promise<void>`                |
-| `abortMultipartUpload(key, uploadId)`                          | 取消分片上传   | `Promise<void>`                |
-| `listParts(key, uploadId)`                                     | 列出已上传分片 | `Promise<ListPartsResult>`     |
+| API                                             | 说明           | 返回值                         |
+| ----------------------------------------------- | -------------- | ------------------------------ |
+| `upload(key, data, options?)`                   | 上传文件       | `Promise<void>`                |
+| `download(key, options?)`                       | 下载文件       | `Promise<Uint8Array>`          |
+| `delete(key)`                                   | 删除文件       | `Promise<void>`                |
+| `exists(key)`                                   | 检查是否存在   | `Promise<boolean>`             |
+| `getMetadata(key)`                              | 获取元数据     | `Promise<ObjectMetadata>`      |
+| `list(prefix?, options?)`                       | 列出对象       | `Promise<ListResult>`          |
+| `copy(sourceKey, destKey, options?)`            | 复制对象       | `Promise<void>`                |
+| `getPresignedUrl(key, options?)`                | 生成预签名 URL | `Promise<string>`              |
+| `initiateMultipartUpload(key, options?)`        | 初始化分片上传 | `Promise<MultipartUploadInit>` |
+| `uploadPart(key, uploadId, partNumber, data)`   | 上传分片       | `Promise<UploadPartResult>`    |
+| `completeMultipartUpload(key, uploadId, parts)` | 完成分片上传   | `Promise<void>`                |
+| `abortMultipartUpload(key, uploadId)`           | 取消分片上传   | `Promise<void>`                |
+| `listParts(key, uploadId)`                      | 列出已上传分片 | `Promise<ListPartsResult>`     |
 
 #### 适配器创建函数
 
-| API                          | 说明               | 配置参数                                          |
-| ---------------------------- | ------------------ | ------------------------------------------------- |
-| `createS3Adapter(config)`    | 创建 S3 适配器     | `bucket`, `region`, `accessKeyId`, `secretAccessKey` |
-| `createOSSAdapter(config)`   | 创建 OSS 适配器    | `bucket`, `region`, `accessKeyId`, `accessKeySecret` |
-| `createCOSAdapter(config)`   | 创建 COS 适配器    | `bucket`, `region`, `secretId`, `secretKey`       |
+| API                        | 说明            | 配置参数                                             |
+| -------------------------- | --------------- | ---------------------------------------------------- |
+| `createS3Adapter(config)`  | 创建 S3 适配器  | `bucket`, `region`, `accessKeyId`, `secretAccessKey` |
+| `createOSSAdapter(config)` | 创建 OSS 适配器 | `bucket`, `region`, `accessKeyId`, `accessKeySecret` |
+| `createCOSAdapter(config)` | 创建 COS 适配器 | `bucket`, `region`, `secretId`, `secretKey`          |
 
 ### 客户端模块 (@dreamer/upload/client)
 
-| API                                      | 说明           | 返回值                     |
-| ---------------------------------------- | -------------- | -------------------------- |
-| `new UploadClient(config)`               | 创建上传客户端 | `UploadClient`             |
-| `createUploadClient(config)`             | 工厂函数       | `UploadClient`             |
-| `client.setToken(token)`                 | 设置认证令牌   | `void`                     |
-| `client.setHeaders(headers)`             | 设置请求头     | `void`                     |
-| `client.upload(file, options?)`          | 上传文件       | `Promise<UploadResult>`    |
-| `client.pause(uploadId)`                 | 暂停上传       | `void`                     |
-| `client.resume(uploadId)`                | 恢复上传       | `Promise<UploadResult>`    |
-| `client.cancel(uploadId)`                | 取消上传       | `void`                     |
-| `client.getPendingUploads()`             | 获取未完成上传 | `Promise<UploadState[]>`   |
-| `client.cleanup(maxAge?)`                | 清理过期状态   | `void`                     |
-| `formatSize(bytes)`                      | 格式化文件大小 | `string`                   |
-| `calculateFileHash(data)`                | 计算文件哈希   | `Promise<string>`          |
+| API                             | 说明           | 返回值                   |
+| ------------------------------- | -------------- | ------------------------ |
+| `new UploadClient(config)`      | 创建上传客户端 | `UploadClient`           |
+| `createUploadClient(config)`    | 工厂函数       | `UploadClient`           |
+| `client.setToken(token)`        | 设置认证令牌   | `void`                   |
+| `client.setHeaders(headers)`    | 设置请求头     | `void`                   |
+| `client.upload(file, options?)` | 上传文件       | `Promise<UploadResult>`  |
+| `client.pause(uploadId)`        | 暂停上传       | `void`                   |
+| `client.resume(uploadId)`       | 恢复上传       | `Promise<UploadResult>`  |
+| `client.cancel(uploadId)`       | 取消上传       | `void`                   |
+| `client.getPendingUploads()`    | 获取未完成上传 | `Promise<UploadState[]>` |
+| `client.cleanup(maxAge?)`       | 清理过期状态   | `void`                   |
+| `formatSize(bytes)`             | 格式化文件大小 | `string`                 |
+| `calculateFileHash(data)`       | 计算文件哈希   | `Promise<string>`        |
 
 **UploadClientConfig 配置项：**
 
-| 选项             | 类型                      | 默认值  | 说明                       |
-| ---------------- | ------------------------- | ------- | -------------------------- |
-| `endpoint`       | `string`                  | -       | 上传端点 URL（必填）       |
-| `chunkSize`      | `number`                  | 5MB     | 分片大小                   |
-| `concurrency`    | `number`                  | 3       | 并发上传数                 |
-| `retries`        | `number`                  | 3       | 重试次数                   |
-| `retryDelay`     | `number`                  | 1000    | 重试延迟（毫秒）           |
-| `timeout`        | `number`                  | 30000   | 请求超时（毫秒）           |
-| `headers`        | `Record<string, string>`  | -       | 自定义请求头               |
-| `token`          | `string`                  | -       | 认证令牌                   |
-| `persistState`   | `boolean`                 | false   | 是否持久化状态             |
-| `stateKeyPrefix` | `string`                  | -       | 状态存储键前缀             |
+| 选项             | 类型                     | 默认值 | 说明                 |
+| ---------------- | ------------------------ | ------ | -------------------- |
+| `endpoint`       | `string`                 | -      | 上传端点 URL（必填） |
+| `chunkSize`      | `number`                 | 5MB    | 分片大小             |
+| `concurrency`    | `number`                 | 3      | 并发上传数           |
+| `retries`        | `number`                 | 3      | 重试次数             |
+| `retryDelay`     | `number`                 | 1000   | 重试延迟（毫秒）     |
+| `timeout`        | `number`                 | 30000  | 请求超时（毫秒）     |
+| `headers`        | `Record<string, string>` | -      | 自定义请求头         |
+| `token`          | `string`                 | -      | 认证令牌             |
+| `persistState`   | `boolean`                | false  | 是否持久化状态       |
+| `stateKeyPrefix` | `string`                 | -      | 状态存储键前缀       |
 
 ### 服务端模块 (@dreamer/upload/server)
 
-| API                                      | 说明               | 返回值                      |
-| ---------------------------------------- | ------------------ | --------------------------- |
-| `new MultipartUploadHandler(config)`     | 创建处理器         | `MultipartUploadHandler`    |
-| `handler.handle(request, basePath)`      | 统一处理（推荐）   | `Promise<Response \| null>` |
-| `handler.handleInit(request)`            | 处理初始化请求     | `Promise<Response>`         |
-| `handler.handleChunk(request)`           | 处理分片上传请求   | `Promise<Response>`         |
-| `handler.handleComplete(request)`        | 处理完成请求       | `Promise<Response>`         |
-| `handler.handleAbort(request)`           | 处理取消请求       | `Promise<Response>`         |
-| `handler.handleStatus(request)`          | 处理状态查询请求   | `Promise<Response>`         |
+| API                                  | 说明             | 返回值                      |
+| ------------------------------------ | ---------------- | --------------------------- |
+| `new MultipartUploadHandler(config)` | 创建处理器       | `MultipartUploadHandler`    |
+| `handler.handle(request, basePath)`  | 统一处理（推荐） | `Promise<Response \| null>` |
+| `handler.handleInit(request)`        | 处理初始化请求   | `Promise<Response>`         |
+| `handler.handleChunk(request)`       | 处理分片上传请求 | `Promise<Response>`         |
+| `handler.handleComplete(request)`    | 处理完成请求     | `Promise<Response>`         |
+| `handler.handleAbort(request)`       | 处理取消请求     | `Promise<Response>`         |
+| `handler.handleStatus(request)`      | 处理状态查询请求 | `Promise<Response>`         |
 
 **MultipartUploadHandlerConfig 配置项：**
 
@@ -579,9 +582,14 @@ const subdir = generateDateSubdir(); // "2026/01/30"
 
 ## 变更日志
 
-### [1.0.0] - 2026-02-20
+### [1.0.1] - 2026-03-27
 
-- **新增**：首个稳定版。Uploader、StorageManager、多云适配器（S3、OSS、COS）、分片与断点续传、UploadClient、MultipartUploadHandler、工具函数（文件名、MIME、校验、哈希）、国际化（en-US、zh-CN）。兼容 Deno 2.6+、Bun 1.3.5+ 及浏览器（客户端）。
+- **新增**：**`LocalCloudStorageAdapter`** /
+  **`createLocalCloudStorageAdapter`** （**`@dreamer/upload/adapters`**）—
+  本地磁盘 **`CloudStorageAdapter`**，支持分片暂存以配合
+  **`MultipartUploadHandler`**。**`package.json`** 与 **`deno.json`** 的
+  **`exports`** 对齐。
+- **变更**：CI 发布使用 **`npx jsr publish`**；**`.gitignore`** 更新。
 
 完整历史：[CHANGELOG](./CHANGELOG.md)。
 

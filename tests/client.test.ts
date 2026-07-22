@@ -125,7 +125,11 @@ async function startTestServer(): Promise<void> {
   });
 
   // 使用 runtime-adapter 的 serve 函数进行跨运行时适配
-  serverHandle = serve(
+  // 【Why】runtime-adapter 的 serve() 在 Node 分支返回 Promise<ServeHandle>
+  //        （server.listen 异步），须 await；Deno/Bun 同步返回 ServeHandle，
+  //        await 非 Promise 安全。不加 await 会使 Node 下 serverHandle 为 Promise，
+  //        afterAll 调 shutdown 报 "not a function"。
+  serverHandle = await serve(
     { port: TEST_SERVER_PORT },
     async (request: Request) => {
       // 使用 /upload 作为基础路径

@@ -20,6 +20,11 @@ import {
   createStorageManager,
   StorageManager,
 } from "../src/storage-manager.ts";
+import { setUploadLocale } from "../src/i18n.ts";
+
+// CI 运行器默认英文 locale，storage-manager 的配置缺失错误经 i18n $tr 翻译为英文，
+// 会导致下方 toThrow("本地存储配置缺失") 等中文断言失败。测试前强制锁定中文 locale。
+setUploadLocale("zh-CN");
 
 // ============================================================================
 // 测试配置

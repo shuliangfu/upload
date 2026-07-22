@@ -7,6 +7,37 @@
 
 ---
 
+## [1.1.0] - 2026-07-23
+
+### 新增
+
+- **Node.js 22+ 兼容**：将全部 Deno 专属 API 替换为 `@dreamer/runtime-adapter`
+  v1.2.2 的跨运行时等价 API：
+  - `src/storage.ts`：`Deno.writeFile/readFile/remove/stat/mkdir` →
+    `writeFile/readFile/remove/stat/mkdir`（`mkdir` 别名为 `makeDir` 以避免与类方法冲突）。
+  - `src/storage-manager.ts`：`Deno.env.toObject()` → `getEnvAll()`。
+  - `src/scanner.ts`：`Deno.connect()` → runtime-adapter `connect()`；将
+    `conn.write()/read()` 重构为流式 `writable.getWriter()/readable.getReader()`。
+- **test:node** 脚本（`tsx --test --test-force-exit tests/*.test.ts`），适配
+  Node.js 22+ 测试运行器。
+- **CI 工作流**（9 jobs）：3 Deno v2.9 + 3 Bun + 3 Node 22（Linux/macOS/Windows）。
+- **tsconfig.json** 与 **.npmrc**（`@jsr:registry`），供 Node/Bun 解析。
+- **minimumDependencyAge: 0**：deno.json 中新增。
+
+### 变更
+
+- 升级依赖：@dreamer/i18n ^1.1.2、@dreamer/runtime-adapter ^1.2.2、
+  @dreamer/test ^1.2.3。
+- package.json 中 `engines.node` 设为 `>=22`。
+
+### 修复
+
+- multipart.test.ts：为"应该能取消分片上传"测试补上缺失的
+  `if (!minioAvailable) return;` 守卫——该测试此前未检查 MinIO 可用性即直连
+  （既有 bug，被 CI 暴露）。
+
+---
+
 ## [1.0.1] - 2026-03-27
 
 ### 新增

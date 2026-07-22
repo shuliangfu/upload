@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.0] - 2026-07-23
+
+### Added
+
+- **Node.js 22+ compatibility**: Replaced all Deno-specific APIs with
+  cross-runtime equivalents from `@dreamer/runtime-adapter` v1.2.2:
+  - `src/storage.ts`: `Deno.writeFile/readFile/remove/stat/mkdir` →
+    `writeFile/readFile/remove/stat/mkdir` (aliased `mkdir as makeDir` to avoid
+    collision with the class method).
+  - `src/storage-manager.ts`: `Deno.env.toObject()` → `getEnvAll()`.
+  - `src/scanner.ts`: `Deno.connect()` → runtime-adapter `connect()`; refactored
+    `conn.write()/read()` to stream-based `writable.getWriter()/readable.getReader()`.
+- **test:node** script (`tsx --test --test-force-exit tests/*.test.ts`) for the
+  Node.js 22+ test runner.
+- **CI workflow** (9 jobs): 3 Deno v2.9 + 3 Bun + 3 Node 22
+  (Linux/macOS/Windows).
+- **tsconfig.json** and **.npmrc** (`@jsr:registry`) for Node/Bun resolution.
+- **minimumDependencyAge: 0** in deno.json.
+
+### Changed
+
+- Upgraded deps: @dreamer/i18n ^1.1.2, @dreamer/runtime-adapter ^1.2.2,
+  @dreamer/test ^1.2.3.
+- `engines.node` set to `>=22` in package.json.
+
+### Fixed
+
+- multipart.test.ts: added missing `if (!minioAvailable) return;` guard to the
+  "应该能取消分片上传" test, which was connecting to MinIO without checking
+  availability (pre-existing bug surfaced by CI).
+
+---
+
 ## [1.0.1] - 2026-03-27
 
 ### Added

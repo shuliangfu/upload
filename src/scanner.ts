@@ -24,6 +24,7 @@
  * ```
  */
 
+import { connect } from "@dreamer/runtime-adapter";
 import { $tr } from "./i18n.ts";
 
 // ============================================================================
@@ -227,22 +228,25 @@ export class ClamAVScanner implements VirusScannerInterface {
    * 发送命令到 ClamAV
    */
   private async sendCommand(command: string): Promise<string> {
-    // 使用 Deno 的 TCP 连接
-    const conn = await Deno.connect({
-      hostname: this.config.host,
+    // 使用跨运行时 TCP 连接（Deno/Bun/Node）
+    const conn = await connect({
+      host: this.config.host,
       port: this.config.port,
     });
 
     try {
-      // 发送命令
       const encoder = new TextEncoder();
-      await conn.write(encoder.encode(`z${command}\0`));
+      const writer = conn.writable.getWriter();
+      await writer.write(encoder.encode(`z${command}\0`));
+      writer.releaseLock();
 
       // 读取响应
-      const buffer = new Uint8Array(4096);
-      const n = await conn.read(buffer);
+      const reader = conn.readable.getReader();
+      const { value } = await reader.read();
+      reader.releaseLock();
+
       const decoder = new TextDecoder();
-      return decoder.decode(buffer.subarray(0, n || 0));
+      return decoder.decode(value ?? new Uint8Array(0));
     } finally {
       conn.close();
     }
@@ -252,16 +256,17 @@ export class ClamAVScanner implements VirusScannerInterface {
    * 使用 INSTREAM 命令扫描数据
    */
   private async scanStream(content: Uint8Array): Promise<string> {
-    const conn = await Deno.connect({
-      hostname: this.config.host,
+    const conn = await connect({
+      host: this.config.host,
       port: this.config.port,
     });
 
     try {
       const encoder = new TextEncoder();
+      const writer = conn.writable.getWriter();
 
       // 发送 INSTREAM 命令
-      await conn.write(encoder.encode("zINSTREAM\0"));
+      await writer.write(encoder.encode("zINSTREAM\0"));
 
       // 分块发送数据
       const chunkSize = 2048;
@@ -272,20 +277,23 @@ export class ClamAVScanner implements VirusScannerInterface {
         const lengthBuffer = new ArrayBuffer(4);
         const view = new DataView(lengthBuffer);
         view.setUint32(0, chunk.length, false);
-        await conn.write(new Uint8Array(lengthBuffer));
+        await writer.write(new Uint8Array(lengthBuffer));
 
         // 发送数据
-        await conn.write(chunk);
+        await writer.write(chunk);
       }
 
       // 发送结束标记（长度为 0）
-      await conn.write(new Uint8Array([0, 0, 0, 0]));
+      await writer.write(new Uint8Array([0, 0, 0, 0]));
+      writer.releaseLock();
 
       // 读取响应
-      const buffer = new Uint8Array(4096);
-      const n = await conn.read(buffer);
+      const reader = conn.readable.getReader();
+      const { value } = await reader.read();
+      reader.releaseLock();
+
       const decoder = new TextDecoder();
-      return decoder.decode(buffer.subarray(0, n || 0));
+      return decoder.decode(value ?? new Uint8Array(0));
     } finally {
       conn.close();
     }

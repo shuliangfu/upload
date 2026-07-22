@@ -4,6 +4,13 @@
  * 提供本地文件系统存储实现
  */
 
+import {
+  mkdir as makeDir,
+  readFile,
+  remove,
+  stat,
+  writeFile,
+} from "@dreamer/runtime-adapter";
 import type { FileStorage } from "./types.ts";
 
 /**
@@ -34,7 +41,7 @@ export class LocalStorage implements FileStorage {
    * @param content - 文件内容
    */
   async save(path: string, content: Uint8Array): Promise<void> {
-    await Deno.writeFile(path, content);
+    await writeFile(path, content);
   }
 
   /**
@@ -44,7 +51,7 @@ export class LocalStorage implements FileStorage {
    * @returns 文件内容
    */
   async read(path: string): Promise<Uint8Array> {
-    return await Deno.readFile(path);
+    return await readFile(path);
   }
 
   /**
@@ -53,7 +60,7 @@ export class LocalStorage implements FileStorage {
    * @param path - 文件路径
    */
   async delete(path: string): Promise<void> {
-    await Deno.remove(path);
+    await remove(path);
   }
 
   /**
@@ -64,7 +71,7 @@ export class LocalStorage implements FileStorage {
    */
   async exists(path: string): Promise<boolean> {
     try {
-      await Deno.stat(path);
+      await stat(path);
       return true;
     } catch {
       return false;
@@ -77,7 +84,7 @@ export class LocalStorage implements FileStorage {
    * @param path - 目录路径
    */
   async mkdir(path: string): Promise<void> {
-    await Deno.mkdir(path, { recursive: true });
+    await makeDir(path, { recursive: true });
   }
 }
 

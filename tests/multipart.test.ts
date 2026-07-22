@@ -172,6 +172,8 @@ describe("MultipartUploader 测试", () => {
     }, { timeout: 30000 });
 
     it("应该能取消分片上传", async () => {
+      if (!minioAvailable) return;
+
       const adapter = createS3Adapter(TEST_S3_CONFIG);
       const uploader = createMultipartUploader({
         partSize: 5 * 1024 * 1024,

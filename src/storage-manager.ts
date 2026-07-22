@@ -33,6 +33,9 @@
  * ```
  */
 
+import { COSStorageAdapter } from "./adapters/cos.ts";
+import { OSSStorageAdapter } from "./adapters/oss.ts";
+import { S3StorageAdapter } from "./adapters/s3.ts";
 import type {
   CloudStorageAdapter,
   CloudUploadOptions,
@@ -43,12 +46,10 @@ import type {
   OSSConfig,
   S3Config,
 } from "./adapters/types.ts";
-import { S3StorageAdapter } from "./adapters/s3.ts";
-import { OSSStorageAdapter } from "./adapters/oss.ts";
-import { COSStorageAdapter } from "./adapters/cos.ts";
 // 使用跨运行时文件系统 API
 import {
   type FileInfo,
+  getEnvAll,
   mkdir,
   readdir,
   readFile,
@@ -403,7 +404,7 @@ export class StorageManager {
    * @returns StorageManager 实例
    */
   static fromEnv(): StorageManager {
-    const env = Deno.env.toObject();
+    const env = getEnvAll();
     const type = (env.STORAGE_TYPE || "local") as StorageType;
 
     const config: StorageManagerConfig = {

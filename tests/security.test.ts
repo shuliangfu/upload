@@ -6,7 +6,7 @@
 
 import { afterAll, beforeAll, describe, expect, it } from "@dreamer/test";
 import { makeTempDir, mkdir, remove } from "@dreamer/runtime-adapter";
-import { join } from "@dreamer/runtime-adapter";
+import { join, resolve } from "@dreamer/runtime-adapter";
 import {
   createLocalCloudStorageAdapter,
   LocalCloudStorageAdapter,
@@ -120,7 +120,13 @@ describe("@dreamer/upload security", () => {
       expect(isPathSafe("/etc/passwd", "/var/uploads")).toBe(false);
       expect(() => resolveSafePath(TMP, "../escape.txt")).toThrow();
       expect(() => resolveSafePath(TMP, "/etc/passwd")).toThrow();
-      expect(resolveSafePath(TMP, "a/b.txt").startsWith(TMP)).toBe(true);
+      // Compare with resolved+normalized base: Deno Windows makeTempDir vs resolve
+      // may disagree on `\` vs `/` while still being the same cage.
+      const norm = (p: string) =>
+        p.replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
+      const safe = norm(resolveSafePath(TMP, "a/b.txt"));
+      const base = norm(resolve(TMP));
+      expect(safe === base || safe.startsWith(base + "/")).toBe(true);
     });
 
     it("LocalCloud 拒绝 key 穿越与非 UUID staging", async () => {

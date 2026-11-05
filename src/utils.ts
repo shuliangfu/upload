@@ -846,16 +846,20 @@ export function sanitizeObjectKey(key: string): string {
  * @param relativeKey - 相对键（不得绝对、不得含 `..`）
  * @returns 绝对安全路径
  */
+function normalizePathSep(path: string): string {
+  return path.replace(/\\/g, "/");
+}
+
 export function resolveSafePath(baseDir: string, relativeKey: string): string {
   if (!isPathSafe(relativeKey, baseDir)) {
     throw new Error(`Unsafe path rejected: ${relativeKey}`);
   }
   const resolvedBase = resolve(baseDir);
   const resolved = resolve(baseDir, relativeKey);
-  const basePrefix = resolvedBase.endsWith("/")
-    ? resolvedBase
-    : resolvedBase + "/";
-  if (resolved !== resolvedBase && !resolved.startsWith(basePrefix)) {
+  // Windows may yield `\`; cage check must be separator-agnostic.
+  const baseNorm = normalizePathSep(resolvedBase).replace(/\/+$/, "");
+  const resolvedNorm = normalizePathSep(resolved);
+  if (resolvedNorm !== baseNorm && !resolvedNorm.startsWith(baseNorm + "/")) {
     throw new Error(`Path escapes baseDir: ${relativeKey}`);
   }
   return resolved;

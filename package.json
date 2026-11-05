@@ -25,7 +25,7 @@
   },
   "devDependencies": {
     "@dreamer/test": "npm:@jsr/dreamer__test@^1.2.3",
-    "tsx": "^4.23.1"
+    "tsx": "^4.23.15"
   },
   "engines": {
     "node": ">=22",

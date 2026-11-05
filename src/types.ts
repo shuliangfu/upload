@@ -137,6 +137,18 @@ export interface UploaderConfig {
   preserveExtension?: boolean;
   /** 子目录生成函数（用于按日期等分类） */
   generateSubdir?: () => string;
+  /**
+   * 是否用魔数校验内容与声明 MIME（默认 true）。
+   * 设 false 可跳过（例如已知可信来源的文本上传）。
+   */
+  verifyMagicBytes?: boolean;
+  /**
+   * 允许的 MIME 为空时，是否拒绝缺少 mimeType 的上传（默认 false，保持 1.x 兼容）。
+   * 若 validation.allowedMimeTypes 已配置，则缺 mime 一律拒绝。
+   */
+  requireMimeType?: boolean;
+  /** 可选薄配额守卫 */
+  quota?: import("./utils.ts").QuotaGuard;
 }
 
 /**

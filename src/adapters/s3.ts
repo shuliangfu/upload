@@ -22,6 +22,7 @@ import type {
   UploadPartResult,
 } from "./types.ts";
 import { $tr } from "../i18n.ts";
+import { assertSafeAcl } from "../utils.ts";
 
 // ============================================================================
 // 辅助函数
@@ -230,6 +231,7 @@ export class S3StorageAdapter implements CloudStorageAdapter {
     url: string,
     headers: Record<string, string>,
     payload: Uint8Array = new Uint8Array(),
+    signOptions?: { unsignedPayload?: boolean },
   ): Promise<Record<string, string>> {
     const encoder = new TextEncoder();
     const parsedUrl = new URL(url);
@@ -241,8 +243,10 @@ export class S3StorageAdapter implements CloudStorageAdapter {
     headers["x-amz-date"] = amzDate;
     headers["host"] = parsedUrl.host;
 
-    // 计算 payload 哈希
-    const payloadHash = bytesToHex(await sha256(payload));
+    // 流式／未知长度：UNSIGNED-PAYLOAD；否则精确 SHA-256（默认，兼容旧行为）
+    const payloadHash = signOptions?.unsignedPayload
+      ? "UNSIGNED-PAYLOAD"
+      : bytesToHex(await sha256(payload));
     headers["x-amz-content-sha256"] = payloadHash;
 
     // 添加会话令牌（如果有）
@@ -326,21 +330,43 @@ export class S3StorageAdapter implements CloudStorageAdapter {
       queryParams?: Record<string, string>;
       headers?: Record<string, string>;
       body?: Uint8Array;
+      streamBody?: ReadableStream<Uint8Array>;
+      signal?: AbortSignal;
+      unsignedPayload?: boolean;
     } = {},
   ): Promise<Response> {
     const url = this.buildUrl(key, options.queryParams);
     const headers: Record<string, string> = { ...options.headers };
     const body = options.body || new Uint8Array();
+    const unsigned = options.unsignedPayload === true ||
+      options.streamBody !== undefined;
 
-    const signedHeaders = await this.signRequest(method, url, headers, body);
+    const signedHeaders = await this.signRequest(
+      method,
+      url,
+      headers,
+      unsigned ? new Uint8Array() : body,
+      { unsignedPayload: unsigned },
+    );
 
-    return await fetch(url, {
+    const hasBody = method !== "GET" && method !== "HEAD" &&
+      method !== "DELETE";
+    const fetchInit: RequestInit = {
       method,
       headers: signedHeaders,
-      body: method !== "GET" && method !== "HEAD" && method !== "DELETE"
-        ? body.slice()
-        : undefined,
-    });
+      signal: options.signal,
+    };
+    if (hasBody) {
+      if (options.streamBody) {
+        fetchInit.body = options.streamBody;
+        // Node fetch 流式上传需要 duplex
+        (fetchInit as RequestInit & { duplex?: string }).duplex = "half";
+      } else {
+        // Deno 类型：Uint8Array → BodyInit；.slice() 得到明确 ArrayBuffer view
+        fetchInit.body = body.slice();
+      }
+    }
+    return await fetch(url, fetchInit);
   }
 
   // ============================================================================
@@ -418,6 +444,7 @@ export class S3StorageAdapter implements CloudStorageAdapter {
       headers["Content-Encoding"] = options.contentEncoding;
     }
     if (options?.acl) {
+      assertSafeAcl(options.acl, this.config.allowDangerousAcl);
       headers["x-amz-acl"] = options.acl;
     }
     if (options?.storageClass) {
@@ -429,9 +456,13 @@ export class S3StorageAdapter implements CloudStorageAdapter {
       }
     }
 
+    const unsigned = options?.unsignedPayload === true ||
+      this.config.defaultUnsignedPayload === true;
     const response = await this.request("PUT", path, {
       headers,
       body: content,
+      signal: options?.signal,
+      unsignedPayload: unsigned,
     });
     if (!response.ok) {
       const text = await response.text();
@@ -456,7 +487,10 @@ export class S3StorageAdapter implements CloudStorageAdapter {
       headers["Range"] = `bytes=${start}-${end}`;
     }
 
-    const response = await this.request("GET", path, { headers });
+    const response = await this.request("GET", path, {
+      headers,
+      signal: options?.signal,
+    });
 
     if (response.status === 404) {
       throw new Error($tr("upload.fileNotFound", { path }));
@@ -723,6 +757,7 @@ export class S3StorageAdapter implements CloudStorageAdapter {
       headers["Cache-Control"] = options.cacheControl;
     }
     if (options?.acl) {
+      assertSafeAcl(options.acl, this.config.allowDangerousAcl);
       headers["x-amz-acl"] = options.acl;
     }
     if (options?.storageClass) {
@@ -773,6 +808,7 @@ export class S3StorageAdapter implements CloudStorageAdapter {
     uploadId: string,
     partNumber: number,
     data: Uint8Array,
+    options?: { signal?: AbortSignal },
   ): Promise<UploadPartResult> {
     const response = await this.request("PUT", key, {
       queryParams: {
@@ -783,6 +819,7 @@ export class S3StorageAdapter implements CloudStorageAdapter {
         "Content-Length": data.length.toString(),
       },
       body: data,
+      signal: options?.signal,
     });
 
     if (!response.ok) {
@@ -915,6 +952,84 @@ export class S3StorageAdapter implements CloudStorageAdapter {
       isTruncated,
       nextPartNumberMarker: nextMarker ? parseInt(nextMarker, 10) : undefined,
     };
+  }
+
+  /**
+   * 流式上传（加法）：签名使用 UNSIGNED-PAYLOAD，body 为 ReadableStream。
+   * 边界：部分 S3 兼容实现／代理可能拒 UNSIGNED-PAYLOAD；失败时回退分片或缓冲 upload。
+   */
+  async uploadStream(
+    path: string,
+    stream: ReadableStream<Uint8Array>,
+    options?: CloudUploadOptions,
+  ): Promise<void> {
+    const headers: Record<string, string> = {};
+    if (options?.contentType) headers["Content-Type"] = options.contentType;
+    if (options?.cacheControl) headers["Cache-Control"] = options.cacheControl;
+    if (options?.contentEncoding) {
+      headers["Content-Encoding"] = options.contentEncoding;
+    }
+    if (options?.acl) {
+      assertSafeAcl(options.acl, this.config.allowDangerousAcl);
+      headers["x-amz-acl"] = options.acl;
+    }
+    if (options?.metadata) {
+      for (const [k, v] of Object.entries(options.metadata)) {
+        headers[`x-amz-meta-${k}`] = v;
+      }
+    }
+    const response = await this.request("PUT", path, {
+      headers,
+      streamBody: stream,
+      signal: options?.signal,
+      unsignedPayload: true,
+    });
+    if (!response.ok) {
+      throw new Error(
+        $tr("upload.s3.uploadFailed", {
+          status: String(response.status),
+          statusText: response.statusText,
+        }),
+      );
+    }
+  }
+
+  /**
+   * 流式下载（加法）：返回 Response.body；支持 Range。
+   */
+  async downloadStream(
+    path: string,
+    options?: DownloadOptions,
+  ): Promise<ReadableStream<Uint8Array>> {
+    const headers: Record<string, string> = {};
+    if (options?.rangeStart !== undefined || options?.rangeEnd !== undefined) {
+      const start = options.rangeStart ?? 0;
+      const end = options.rangeEnd !== undefined ? options.rangeEnd : "";
+      headers["Range"] = `bytes=${start}-${end}`;
+    }
+    const response = await this.request("GET", path, {
+      headers,
+      signal: options?.signal,
+    });
+    if (response.status === 404) {
+      throw new Error($tr("upload.fileNotFound", { path }));
+    }
+    if (!response.ok && response.status !== 206) {
+      throw new Error(
+        $tr("upload.s3.downloadFailed", {
+          status: String(response.status),
+          statusText: response.statusText,
+        }),
+      );
+    }
+    if (!response.body) {
+      return new ReadableStream<Uint8Array>({
+        start(c) {
+          c.close();
+        },
+      });
+    }
+    return response.body;
   }
 }
 

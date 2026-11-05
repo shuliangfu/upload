@@ -119,6 +119,7 @@ describe("MultipartUploadHandler 测试", () => {
     it("应该能创建处理器实例", () => {
       const storage = createS3Adapter(TEST_S3_CONFIG);
       const handler = createMultipartUploadHandler({
+        requireAuth: false,
         storage,
       });
 
@@ -128,7 +129,10 @@ describe("MultipartUploadHandler 测试", () => {
 
     it("应该拒绝缺少参数的初始化请求", async () => {
       const storage = createS3Adapter(TEST_S3_CONFIG);
-      const handler = createMultipartUploadHandler({ storage });
+      const handler = createMultipartUploadHandler({
+        requireAuth: false,
+        storage,
+      });
 
       const request = createJsonRequest(
         "http://localhost/upload/init",
@@ -146,6 +150,7 @@ describe("MultipartUploadHandler 测试", () => {
     it("应该拒绝超过大小限制的文件", async () => {
       const storage = createS3Adapter(TEST_S3_CONFIG);
       const handler = createMultipartUploadHandler({
+        requireAuth: false,
         storage,
         maxFileSize: 1024, // 1KB 限制
       });
@@ -161,15 +166,18 @@ describe("MultipartUploadHandler 测试", () => {
       );
 
       const response = await handler.handleInit(request);
-      expect(response.status).toBe(400);
+      // 1.2：超限使用 413 + PAYLOAD_TOO_LARGE
+      expect(response.status).toBe(413);
 
       const body = await response.json();
       expect(body.error).toContain("文件大小超过限制");
+      expect(body.code).toBe("PAYLOAD_TOO_LARGE");
     });
 
     it("应该拒绝不支持的 MIME 类型", async () => {
       const storage = createS3Adapter(TEST_S3_CONFIG);
       const handler = createMultipartUploadHandler({
+        requireAuth: false,
         storage,
         allowedMimeTypes: ["image/*"],
       });
@@ -178,10 +186,10 @@ describe("MultipartUploadHandler 测试", () => {
         "http://localhost/upload/init",
         "POST",
         {
-          filename: "script.js",
+          filename: "photo.png",
           fileSize: 1024,
           chunks: 1,
-          mimeType: "application/javascript",
+          mimeType: "application/pdf",
         },
       );
 
@@ -203,6 +211,7 @@ describe("MultipartUploadHandler 测试", () => {
 
       const storage = createS3Adapter(TEST_S3_CONFIG);
       const handler = createMultipartUploadHandler({
+        requireAuth: false,
         storage,
         pathPrefix: "test-uploads",
       });
@@ -276,7 +285,10 @@ describe("MultipartUploadHandler 测试", () => {
       if (!minioAvailable) return;
 
       const storage = createS3Adapter(TEST_S3_CONFIG);
-      const handler = createMultipartUploadHandler({ storage });
+      const handler = createMultipartUploadHandler({
+        requireAuth: false,
+        storage,
+      });
 
       // 初始化上传
       const initRequest = createJsonRequest(
@@ -314,7 +326,10 @@ describe("MultipartUploadHandler 测试", () => {
   describe("统一路由处理", () => {
     it("应该正确路由 init 请求", async () => {
       const storage = createS3Adapter(TEST_S3_CONFIG);
-      const handler = createMultipartUploadHandler({ storage });
+      const handler = createMultipartUploadHandler({
+        requireAuth: false,
+        storage,
+      });
 
       const request = createJsonRequest(
         "http://localhost/upload/init",
@@ -330,7 +345,10 @@ describe("MultipartUploadHandler 测试", () => {
 
     it("应该对不匹配的路径返回 null", () => {
       const storage = createS3Adapter(TEST_S3_CONFIG);
-      const handler = createMultipartUploadHandler({ storage });
+      const handler = createMultipartUploadHandler({
+        requireAuth: false,
+        storage,
+      });
 
       const request = new Request("http://localhost/other/path", {
         method: "POST",
@@ -342,7 +360,10 @@ describe("MultipartUploadHandler 测试", () => {
 
     it("应该正确处理自定义路径前缀", async () => {
       const storage = createS3Adapter(TEST_S3_CONFIG);
-      const handler = createMultipartUploadHandler({ storage });
+      const handler = createMultipartUploadHandler({
+        requireAuth: false,
+        storage,
+      });
 
       const request = createJsonRequest(
         "http://localhost/api/v1/files/init",

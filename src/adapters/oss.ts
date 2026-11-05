@@ -23,6 +23,7 @@ import type {
 } from "./types.ts";
 import { S3Signer } from "./s3-signature.ts";
 import { $tr } from "../i18n.ts";
+import { assertSafeAcl } from "../utils.ts";
 
 // ============================================================================
 // 辅助函数
@@ -271,6 +272,7 @@ export class OSSStorageAdapter implements CloudStorageAdapter {
       queryParams?: Record<string, string>;
       headers?: Record<string, string>;
       body?: Uint8Array;
+      signal?: AbortSignal;
     } = {},
   ): Promise<Response> {
     const url = this.buildUrl(key, options.queryParams);
@@ -291,6 +293,7 @@ export class OSSStorageAdapter implements CloudStorageAdapter {
       body: method !== "GET" && method !== "HEAD" && method !== "DELETE"
         ? body.slice()
         : undefined,
+      signal: options.signal,
     });
   }
 
@@ -347,6 +350,7 @@ export class OSSStorageAdapter implements CloudStorageAdapter {
       headers["Cache-Control"] = options.cacheControl;
     }
     if (options?.acl) {
+      assertSafeAcl(options.acl, this.config.allowDangerousAcl);
       headers["x-oss-object-acl"] = options.acl;
     }
     if (options?.storageClass) {
@@ -382,7 +386,10 @@ export class OSSStorageAdapter implements CloudStorageAdapter {
       headers["Range"] = `bytes=${start}-${end}`;
     }
 
-    const response = await this.request("GET", path, { headers });
+    const response = await this.request("GET", path, {
+      headers,
+      signal: options?.signal,
+    });
 
     if (response.status === 404) {
       throw new Error($tr("upload.fileNotFound", { path }));
@@ -566,6 +573,7 @@ export class OSSStorageAdapter implements CloudStorageAdapter {
       headers["Cache-Control"] = options.cacheControl;
     }
     if (options?.acl) {
+      assertSafeAcl(options.acl, this.config.allowDangerousAcl);
       headers["x-oss-object-acl"] = options.acl;
     }
     if (options?.storageClass) {
@@ -610,6 +618,7 @@ export class OSSStorageAdapter implements CloudStorageAdapter {
     uploadId: string,
     partNumber: number,
     data: Uint8Array,
+    options?: { signal?: AbortSignal },
   ): Promise<UploadPartResult> {
     const response = await this.request("PUT", key, {
       queryParams: {
@@ -620,6 +629,7 @@ export class OSSStorageAdapter implements CloudStorageAdapter {
         "Content-Length": data.length.toString(),
       },
       body: data,
+      signal: options?.signal,
     });
 
     if (!response.ok) {

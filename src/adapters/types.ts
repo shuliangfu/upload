@@ -92,6 +92,13 @@ export interface CloudUploadOptions {
   cacheControl?: string;
   /** 内容编码 */
   contentEncoding?: string;
+  /** 取消信号（加法；适配器透传至 fetch／本地写） */
+  signal?: AbortSignal;
+  /**
+   * S3：签名时使用 `UNSIGNED-PAYLOAD`（不预哈希 body）。
+   * 流式 PUT／未知长度 body 时需要；默认 false 保持原精确哈希。
+   */
+  unsignedPayload?: boolean;
 }
 
 /**
@@ -102,6 +109,8 @@ export interface DownloadOptions {
   rangeStart?: number;
   /** 范围结束（字节） */
   rangeEnd?: number;
+  /** 取消信号（加法） */
+  signal?: AbortSignal;
 }
 
 /**
@@ -282,6 +291,7 @@ export interface CloudStorageAdapter extends FileStorage {
     uploadId: string,
     partNumber: number,
     data: Uint8Array,
+    options?: { signal?: AbortSignal },
   ): Promise<UploadPartResult>;
 
   /**
@@ -313,6 +323,23 @@ export interface CloudStorageAdapter extends FileStorage {
    * @returns 分片列表
    */
   listParts(key: string, uploadId: string): Promise<ListPartsResult>;
+
+  /**
+   * 可选：流式上传整对象（加法）。未实现的适配器不要调用。
+   */
+  uploadStream?(
+    path: string,
+    stream: ReadableStream<Uint8Array>,
+    options?: CloudUploadOptions,
+  ): Promise<void>;
+
+  /**
+   * 可选：流式下载整对象（加法）。
+   */
+  downloadStream?(
+    path: string,
+    options?: DownloadOptions,
+  ): Promise<ReadableStream<Uint8Array>>;
 }
 
 // ============================================================================
@@ -337,6 +364,15 @@ export interface S3Config {
   endpoint?: string;
   /** 是否强制路径样式访问 */
   forcePathStyle?: boolean;
+  /**
+   * 默认对请求体使用 UNSIGNED-PAYLOAD（小步流式／未知长度）。
+   * 精确内容哈希仍可通过单次 upload(Uint8Array) 且 unsignedPayload:false 获得。
+   */
+  defaultUnsignedPayload?: boolean;
+  /**
+   * 允许危险 ACL（如 public-read-write）。默认 false。
+   */
+  allowDangerousAcl?: boolean;
 }
 
 /**
@@ -363,6 +399,10 @@ export interface OSSConfig {
   useS3Compatible?: boolean;
   /** 是否强制路径样式访问（S3 兼容模式下使用） */
   forcePathStyle?: boolean;
+  /**
+   * 允许危险 ACL（如 public-read-write）。默认 false。
+   */
+  allowDangerousAcl?: boolean;
 }
 
 /**
@@ -387,4 +427,8 @@ export interface COSConfig {
   useS3Compatible?: boolean;
   /** 是否强制路径样式访问（S3 兼容模式下使用） */
   forcePathStyle?: boolean;
+  /**
+   * 允许危险 ACL（如 public-read-write）。默认 false。
+   */
+  allowDangerousAcl?: boolean;
 }

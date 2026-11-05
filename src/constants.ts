@@ -7,16 +7,92 @@
 /**
  * 默认禁止的扩展名（可执行文件）
  */
+/**
+ * 默认禁止的扩展名（可执行／脚本／网页／WebAssembly）。
+ *
+ * 含 js／html／svg／wasm：堵住「当图片上传」的 XSS／脚本绕过。
+ * 应用若确需放行静态资源，请显式收窄 `forbiddenExtensions`／`forbiddenMimeTypes`。
+ */
 export const DEFAULT_FORBIDDEN_EXTENSIONS = [
   ".exe",
   ".bat",
   ".cmd",
+  ".com",
+  ".msi",
+  ".scr",
+  ".ps1",
+  ".vbs",
+  ".wsf",
   ".sh",
+  ".bash",
+  ".zsh",
   ".php",
+  ".phtml",
+  ".php3",
+  ".php4",
+  ".php5",
+  ".phar",
   ".jsp",
+  ".jspx",
   ".asp",
   ".aspx",
+  ".asa",
+  ".cer",
+  ".cgi",
+  ".pl",
+  ".py",
+  ".rb",
+  ".dll",
+  ".so",
+  ".dylib",
+  ".wasm",
+  ".js",
+  ".mjs",
+  ".cjs",
+  ".jsx",
+  ".ts",
+  ".tsx",
+  ".html",
+  ".htm",
+  ".shtml",
+  ".xhtml",
+  ".svg",
+  ".svgz",
+  ".htaccess",
+  ".htpasswd",
+  ".elf",
+  ".apk",
+  ".ipa",
+  ".deb",
+  ".rpm",
 ];
+
+/**
+ * 默认禁止的 MIME（与扩展名黑名单对齐；不信客户端 Content-Type 时仍作兜底）。
+ */
+export const DEFAULT_FORBIDDEN_MIME_TYPES = [
+  "application/x-executable",
+  "application/x-msdownload",
+  "application/x-msdos-program",
+  "application/x-mach-binary",
+  "application/x-sharedlib",
+  "application/x-elf",
+  "application/wasm",
+  "application/javascript",
+  "text/javascript",
+  "text/html",
+  "application/xhtml+xml",
+  "image/svg+xml",
+  "application/x-httpd-php",
+  "text/x-php",
+  "application/java-archive",
+];
+
+/**
+ * 危险 ACL：默认拒绝，除非适配器显式 allowDangerousAcl。
+ * 意图：防止误把桶对象设成任何人可写。
+ */
+export const DANGEROUS_ACLS = ["public-read-write"] as const;
 
 /**
  * 常见 MIME 类型映射

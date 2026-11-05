@@ -58,6 +58,7 @@ import {
   writeFile,
 } from "@dreamer/runtime-adapter";
 import { $tr } from "./i18n.ts";
+import { assertPathSafe, isPathSafe, sanitizeObjectKey } from "./utils.ts";
 
 // ============================================================================
 // 类型定义
@@ -155,10 +156,19 @@ class LocalStorageAdapter {
   }
 
   /**
-   * 获取完整文件路径
+   * 获取完整文件路径（牢笼：sanitize + resolveSafePath）。
+   *
+   * 为何不字符串拼接：`../` 可逃出 baseDir（与 local-cloud 同一 Critical）。
    */
   private getFullPath(key: string): string {
-    return `${this.config.baseDir}/${key}`;
+    if (!isPathSafe(key, this.config.baseDir)) {
+      throw new Error("Unsafe path rejected");
+    }
+    const safeKey = sanitizeObjectKey(key);
+    if (!safeKey) {
+      throw new Error("Empty object key after sanitize");
+    }
+    return assertPathSafe(this.config.baseDir, safeKey);
   }
 
   /**
@@ -265,9 +275,10 @@ class LocalStorageAdapter {
    */
   async listObjects(options?: ListOptions): Promise<ListResult> {
     await this.init();
-    const prefix = options?.prefix || "";
-    const dir = prefix
-      ? `${this.config.baseDir}/${prefix}`
+    const prefix = options?.prefix ? sanitizeObjectKey(options.prefix) : "";
+    // 列表根：无前缀用 baseDir；有前缀必须落在牢笼内
+    const listRoot = prefix
+      ? assertPathSafe(this.config.baseDir, prefix)
       : this.config.baseDir;
 
     const objects: Array<{
@@ -277,11 +288,16 @@ class LocalStorageAdapter {
     }> = [];
 
     try {
-      const entries = await readdir(dir);
+      const entries = await readdir(listRoot);
       for (const entry of entries) {
         if (entry.isFile) {
           const key = prefix ? `${prefix}/${entry.name}` : entry.name;
-          const fileInfo: FileInfo = await stat(`${dir}/${entry.name}`);
+          const fileInfo: FileInfo = await stat(
+            assertPathSafe(
+              this.config.baseDir,
+              sanitizeObjectKey(key),
+            ),
+          );
           objects.push({
             key,
             size: fileInfo.size,

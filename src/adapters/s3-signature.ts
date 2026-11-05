@@ -177,6 +177,7 @@ export class S3Signer {
     url: string,
     headers: Record<string, string>,
     payload: Uint8Array = new Uint8Array(),
+    signOptions?: { unsignedPayload?: boolean },
   ): Promise<Record<string, string>> {
     const encoder = new TextEncoder();
     const parsedUrl = new URL(url);
@@ -188,8 +189,10 @@ export class S3Signer {
     headers["x-amz-date"] = amzDate;
     headers["host"] = parsedUrl.host;
 
-    // 计算 payload 哈希
-    const payloadHash = bytesToHex(await sha256(payload));
+    // 流式小步：UNSIGNED-PAYLOAD；默认仍精确哈希
+    const payloadHash = signOptions?.unsignedPayload
+      ? "UNSIGNED-PAYLOAD"
+      : bytesToHex(await sha256(payload));
     headers["x-amz-content-sha256"] = payloadHash;
 
     // 添加会话令牌（如果有）

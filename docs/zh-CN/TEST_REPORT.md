@@ -23,9 +23,10 @@
 
 ### 三端测试摘要
 
-三端全部通过。Deno 计 115 条（含 10 条 Deno runner 注入的 `@dreamer/test
-cleanup browsers`，每个测试文件一条）；Bun 与 Node 各计 105 条。云存储适配器测试
-（S3/OSS/COS/分片上传）在 MinIO 不可用时（如 CI）自动跳过。
+三端全部通过。Deno 计 115 条（含 10 条 Deno runner 注入的
+`@dreamer/test
+cleanup browsers`，每个测试文件一条）；Bun 与 Node 各计 105
+条。云存储适配器测试 （S3/OSS/COS/分片上传）在 MinIO 不可用时（如 CI）自动跳过。
 
 ### 测试文件统计
 

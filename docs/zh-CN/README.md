@@ -22,7 +22,7 @@
 - **多云存储**: 支持 AWS S3、阿里云 OSS、腾讯云 COS、本地存储
 - **分片上传**: 大文件自动分片，支持并发上传和断点续传
 - **安全扫描**: 文件类型检测、病毒扫描、敏感内容识别
-- **存储管理**: 自动清理、配额管理、文件生命周期
+- **存储管理**: 自动清理、可选 `QuotaGuard` 薄配额、文件辅助
 
 ---
 
@@ -51,12 +51,12 @@ import { UploadClient } from "@dreamer/upload/client";
 
 ## 🌍 环境兼容性
 
-| 环境       | 版本要求 | 状态                               |
-| ---------- | -------- | ---------------------------------- |
-| **Deno**   | 2.5+     | ✅ 完全支持                        |
-| **Bun**    | 1.0+     | ✅ 完全支持                        |
-| **服务端** | -        | ✅ 支持（兼容 Deno 和 Bun 运行时） |
-| **浏览器** | -        | ✅ 支持（客户端模块）              |
+| 环境        | 版本要求 | 状态                                      |
+| ----------- | -------- | ----------------------------------------- |
+| **Deno**    | 2.5+     | ✅ 完全支持                               |
+| **Bun**     | 1.3+     | ✅ 完全支持                               |
+| **Node.js** | 22+      | ✅ 完全支持（`@dreamer/runtime-adapter`） |
+| **浏览器**  | -        | ✅ 客户端模块（`@dreamer/upload/client`） |
 
 ---
 
@@ -451,7 +451,7 @@ const subdir = generateDateSubdir(); // "2026/01/30"
 | `isArchive(filename)`                 | 检查是否为压缩文件 | `boolean`                |
 | `validateFile(file, options)`         | 验证单个文件       | `FileValidationResult`   |
 | `validateFiles(files, options)`       | 验证多个文件       | `FileValidationResult[]` |
-| `isPathSafe(path)`                    | 检查路径是否安全   | `boolean`                |
+| `isPathSafe(path, basePath)`          | 检查路径是否安全   | `boolean`                |
 | `computeHash(data)`                   | 计算 SHA-256 哈希  | `Promise<string>`        |
 | `computeShortHash(data, length)`      | 计算短哈希         | `Promise<string>`        |
 | `formatFileSize(bytes)`               | 格式化文件大小     | `string`                 |
@@ -532,15 +532,21 @@ const subdir = generateDateSubdir(); // "2026/01/30"
 
 **MultipartUploadHandlerConfig 配置项：**
 
-| 选项               | 类型                                | 默认值 | 说明               |
-| ------------------ | ----------------------------------- | ------ | ------------------ |
-| `storage`          | `CloudStorageAdapter`               | -      | 存储适配器（必填） |
-| `maxPartSize`      | `number`                            | 100MB  | 最大分片大小       |
-| `maxFileSize`      | `number`                            | 5GB    | 最大文件大小       |
-| `allowedMimeTypes` | `string[]`                          | []     | 允许的 MIME 类型   |
-| `pathPrefix`       | `string`                            | ""     | 上传路径前缀       |
-| `generatePath`     | `(filename, meta) => string`        | -      | 自定义路径生成     |
-| `validate`         | `(filename, size, mime) => boolean` | -      | 自定义验证函数     |
+| 选项                         | 类型                                | 默认值   | 说明                                               |
+| ---------------------------- | ----------------------------------- | -------- | -------------------------------------------------- |
+| `storage`                    | `CloudStorageAdapter`               | -        | 存储适配器（必填）                                 |
+| `maxPartSize`                | `number`                            | 100MB    | 最大分片大小                                       |
+| `maxFileSize`                | `number`                            | 5GB      | 最大文件大小                                       |
+| `allowedMimeTypes`           | `string[]`                          | []       | 允许的 MIME 类型                                   |
+| `pathPrefix`                 | `string`                            | ""       | 上传路径前缀                                       |
+| `generatePath`               | `(filename, meta) => string`        | -        | 自定义路径生成                                     |
+| `validate`                   | `(filename, size, mime) => boolean` | -        | 自定义验证                                         |
+| `requireAuth`                | `boolean`                           | **true** | 必须配置 `authenticate`（相对 ≤1.1 行为 BREAKING） |
+| `authenticate`               | `(req) => AuthContext \| null`      | -        | 鉴权钩子                                           |
+| `verifyContentAfterComplete` | `boolean`                           | true     | 合并后魔数／内容校验                               |
+| `verifyContentHeadBytes`     | `number`                            | 65536    | 二次校验 Range 头字节数                            |
+| `sessionTtlMs`               | `number`                            | 24h      | 内存会话 TTL                                       |
+| `onEvent`                    | `(event) => void`                   | -        | 可观测钩子                                         |
 
 ---
 
@@ -548,9 +554,20 @@ const subdir = generateDateSubdir(); // "2026/01/30"
 
 - **分片上传**：大文件自动分片，支持并发上传
 - **断点续传**：状态持久化，避免重复上传
-- **流式处理**：减少内存占用
+- **二次校验**：默认 Range 只拉对象头（64KiB），避免 complete 全量下载
+- **local-cloud 顺序 append 合并**：峰值内存≈单分片
+- **可选流式**：`uploadStream`／`downloadStream`（local-cloud、S3）；S3 流式用
+  `UNSIGNED-PAYLOAD`
+- **AbortSignal**＋会话 TTL 扫，限制内存会话堆积
 - **连接复用**：适配器内部复用 HTTP 连接
-- **智能分片**：根据文件大小自动计算最优分片大小
+
+### 大文件／内存
+
+- 多 GB 对象优先 S3／OSS／COS 分片；local-cloud 适合实验／中小文件。
+- 分片暂存 `baseDir/.staging/<uploadId>/`，init／`cleanupExpiredStaging` 按 TTL
+  清理。
+- 本包**不是** `@dreamer/storage` 替代品；生命周期／CDN／桶 IAM 请用 storage
+  或云控制台。
 
 ---
 
@@ -560,40 +577,42 @@ const subdir = generateDateSubdir(); // "2026/01/30"
 
 ### 测试统计
 
-- **测试时间**: 2026-01-30
-- **测试环境**: Deno 2.6.4 / Bun 1.3.5
-- **总测试数**: 107
-- **通过**: 107 ✅
-- **失败**: 0
-- **通过率**: 100%
+- 以本地／CI 当次全量结果为准（Deno + Bun + Node）；安全＋1.2 烟雾用例已纳入
+  `tests/`。
 
 ---
 
+## ⚙️ 配置说明（默认安全）
+
+完整配置表（名称／类型／**默认值**／含义／危险改法／迁移）：[CONFIGURATION.md](./CONFIGURATION.md)。
+
+绕过矩阵：[BYPASS_MATRIX.md](./BYPASS_MATRIX.md)。
+
 ## 📝 注意事项
 
-- **服务端和客户端分离**：通过 `/client` 和 `/server` 子路径明确区分
-- **统一接口**：所有存储适配器使用相同的 `CloudStorageAdapter` 接口
-- **跨运行时**：使用 `@dreamer/runtime-adapter` 实现 Deno/Bun 兼容
-- **S3 兼容模式**：OSS 和 COS 适配器支持 S3 兼容模式，可使用 MinIO 测试
-- **分片大小**：S3/MinIO 要求分片（除最后一个外）至少 5MB
-- **类型安全**：完全采用 TypeScript，所有 API 都有完整的类型定义
+- **鉴权默认（1.2）**：`requireAuth: true`——请接入
+  `authenticate`。`requireAuth: false` **仅测／本地**，生产禁止。
+- **勿信任客户端 MIME／扩展名**：魔数＋黑名单；见
+  `docs/zh-CN/BYPASS_MATRIX.md`。
+- **服务端／客户端分离**：`/client` 与 `/server`；Node 22+／Deno／Bun 经
+  `@dreamer/runtime-adapter`。
+- **S3 分片大小**：除最后一片外通常 ≥ 5MB（S3／MinIO）。
+- **非存储平台**：对象生命周期／CDN／桶策略属 `@dreamer/storage` 或云控制台。
+- **边界**：不替代真杀毒；本包无 zip 解压入口。
 
 ---
 
 ## 变更日志
 
-### [1.0.1] - 2026-03-27
+### [1.2.0]（计划）— 安全＋性能
 
-- **新增**：**`LocalCloudStorageAdapter`** /
-  **`createLocalCloudStorageAdapter`** （**`@dreamer/upload/adapters`**）—
-  本地磁盘 **`CloudStorageAdapter`**，支持分片暂存以配合
-  **`MultipartUploadHandler`**。**`package.json`** 与 **`deno.json`** 的
-  **`exports`** 对齐。
-- **变更**：CI 发布使用 **`npx jsr publish`**；**`.gitignore`** 更新。
+- **BREAKING**：`requireAuth` 默认 **true**（迁移：接 `authenticate` 或
+  `requireAuth: false`）。
+- 路径牢笼、会话绑定、魔数／内容策略、绕过矩阵。
+- 头 Range 二次校验、local-cloud append 合并、流式＋S3
+  `UNSIGNED-PAYLOAD`、AbortSignal、`onEvent`、类型化错误码。
 
 完整历史：[CHANGELOG](./CHANGELOG.md)。
-
----
 
 ## 🤝 贡献
 

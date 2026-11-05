@@ -54,18 +54,30 @@ export type {
 // 常量导出
 // ============================================================================
 
-export { DEFAULT_FORBIDDEN_EXTENSIONS, MIME_TYPES } from "./constants.ts";
+export {
+  DANGEROUS_ACLS,
+  DEFAULT_FORBIDDEN_EXTENSIONS,
+  DEFAULT_FORBIDDEN_MIME_TYPES,
+  MIME_TYPES,
+} from "./constants.ts";
 
 // ============================================================================
 // 工具函数导出
 // ============================================================================
 
 export {
+  // 路径牢笼
+  assertPathSafe,
+  assertSafeAcl,
+  // 响应创建
+  buildContentDisposition,
   // 文件名处理
   computeHash,
   computeShortHash,
-  // 响应创建
   createFileResponse,
+  // MIME 类型匹配／魔数
+  detectMimeType,
+  findForbiddenExtension,
   // 文件大小格式化
   formatFileSize,
   // 子目录生成
@@ -83,13 +95,23 @@ export {
   isHiddenFile,
   isImage,
   isPathSafe,
+  isUuid,
   isVideo,
-  // MIME 类型匹配
   matchMimeType,
-  sanitizeFilename,
   // 验证函数
+  normalizeFilenameForPolicy,
+  // 薄配额
+  QuotaGuard,
+  redactErrorMessage,
+  resolveSafePath,
+  sanitizeFilename,
+  sanitizeObjectKey,
+  scanDangerousPayload,
+  validateContentExtensionConsistency,
   validateFile,
   validateFiles,
+  validateMimeType,
+  validateUploadContent,
 } from "./utils.ts";
 
 // ============================================================================

@@ -12,7 +12,16 @@ import type {
   UploadResult,
 } from "./types.ts";
 import { LocalStorage } from "./storage.ts";
-import { formatFileSize, generateFilename, validateFile } from "./utils.ts";
+import {
+  assertPathSafe,
+  formatFileSize,
+  generateFilename,
+  type QuotaGuard,
+  sanitizeFilename,
+  sanitizeObjectKey,
+  validateFile,
+  validateUploadContent,
+} from "./utils.ts";
 
 /**
  * 文件上传处理器
@@ -40,7 +49,15 @@ import { formatFileSize, generateFilename, validateFile } from "./utils.ts";
  * ```
  */
 export class Uploader {
-  private config: Required<UploaderConfig>;
+  private config:
+    & Required<
+      Omit<UploaderConfig, "quota" | "verifyMagicBytes" | "requireMimeType">
+    >
+    & {
+      quota?: QuotaGuard;
+      verifyMagicBytes: boolean;
+      requireMimeType: boolean;
+    };
 
   /**
    * 创建上传处理器
@@ -57,6 +74,9 @@ export class Uploader {
         ((name) => generateFilename(name, true)),
       preserveExtension: config.preserveExtension ?? true,
       generateSubdir: config.generateSubdir || (() => ""),
+      verifyMagicBytes: config.verifyMagicBytes ?? true,
+      requireMimeType: config.requireMimeType ?? false,
+      quota: config.quota,
     };
   }
 
@@ -88,6 +108,7 @@ export class Uploader {
    * @param originalName - 原始文件名
    * @param mimeType - MIME 类型
    * @param fieldName - 表单字段名
+   * @param options.signal - 取消信号（加法）
    * @returns 上传的文件信息
    */
   async upload(
@@ -95,41 +116,72 @@ export class Uploader {
     originalName: string,
     mimeType: string,
     fieldName = "file",
+    options?: { signal?: AbortSignal },
   ): Promise<UploadedFile> {
-    // 验证文件
+    if (options?.signal?.aborted) {
+      throw new DOMException("Upload aborted", "AbortError");
+    }
+    const safeName = sanitizeFilename(originalName) || "file";
+    const allowed = this.config.validation.allowedMimeTypes;
+    // 缺 MIME：若配置了 allowlist 或显式 requireMimeType 则拒绝
+    if (
+      (!mimeType || !mimeType.trim()) &&
+      ((allowed && allowed.length > 0) || this.config.requireMimeType)
+    ) {
+      throw new Error("缺少 MIME 类型");
+    }
+
     const validation = validateFile(
-      { name: originalName, type: mimeType, size: content.length },
+      {
+        name: safeName,
+        type: mimeType || "application/octet-stream",
+        size: content.length,
+      },
       this.config.validation,
     );
-
     if (!validation.valid) {
       throw new Error(validation.error);
     }
 
-    // 生成文件名
-    const filename = this.config.generateFilename(originalName, mimeType);
+    // 魔数／扩展名／危险载荷统一策略（不信客户端 MIME）
+    if (this.config.verifyMagicBytes && content.length > 0) {
+      const magic = validateUploadContent(
+        safeName,
+        content,
+        mimeType || undefined,
+      );
+      if (!magic.valid) {
+        throw new Error(magic.error || "文件内容校验失败");
+      }
+    }
 
-    // 生成子目录
-    const subdir = this.config.generateSubdir();
+    if (this.config.quota) {
+      this.config.quota.reserve(content.length);
+    }
+
+    const filename = sanitizeFilename(
+      this.config.generateFilename(safeName, mimeType),
+    ) || generateFilename(safeName, true);
+
+    const rawSubdir = this.config.generateSubdir() || "";
+    const subdir = rawSubdir ? sanitizeObjectKey(rawSubdir) : "";
+    // 相对键：subdir/filename；落盘路径必须在 uploadDir 牢笼内
+    const relativeKey = subdir ? `${subdir}/${filename}` : filename;
+    const absPath = assertPathSafe(this.config.uploadDir, relativeKey);
+
+    // LocalStorage 按绝对／原样路径读写；mkdir 父目录
     const dir = subdir
-      ? `${this.config.uploadDir}/${subdir}`
+      ? assertPathSafe(this.config.uploadDir, subdir)
       : this.config.uploadDir;
-
-    // 确保目录存在
     await this.config.storage.mkdir(dir);
-
-    // 完整路径
-    const path = `${dir}/${filename}`;
-
-    // 保存文件
-    await this.config.storage.save(path, content);
+    await this.config.storage.save(absPath, content);
 
     return {
       originalName,
       filename,
-      path,
+      path: absPath,
       size: content.length,
-      mimeType,
+      mimeType: mimeType || "application/octet-stream",
       fieldName,
     };
   }
@@ -226,12 +278,40 @@ export class Uploader {
   }
 
   /**
+   * 将调用方路径约束到 uploadDir 牢笼。
+   *
+   * 支持：相对键（推荐）或已是牢笼内的绝对路径。
+   * 为何拒绝牢笼外绝对路径：Uploader.delete/read 曾直接透传，可删读任意文件。
+   */
+  private cagePath(path: string): string {
+    const uploadDir = this.config.uploadDir;
+    if (path.startsWith("/") || /^[A-Za-z]:[\\/]/.test(path)) {
+      const normalizedUpload = uploadDir.replace(/\\/g, "/").replace(
+        /\/+$/,
+        "",
+      );
+      const normalizedPath = path.replace(/\\/g, "/");
+      const prefix = normalizedUpload + "/";
+      if (
+        normalizedPath === normalizedUpload ||
+        normalizedPath.startsWith(prefix)
+      ) {
+        const rel = normalizedPath.slice(prefix.length) || ".";
+        if (rel === ".") return assertPathSafe(uploadDir, ".");
+        return assertPathSafe(uploadDir, sanitizeObjectKey(rel));
+      }
+      throw new Error(`Path outside uploadDir: ${path}`);
+    }
+    return assertPathSafe(uploadDir, sanitizeObjectKey(path));
+  }
+
+  /**
    * 删除已上传的文件
    *
    * @param path - 文件路径
    */
   async delete(path: string): Promise<void> {
-    await this.config.storage.delete(path);
+    await this.config.storage.delete(this.cagePath(path));
   }
 
   /**
@@ -241,7 +321,7 @@ export class Uploader {
    * @returns 文件内容
    */
   async read(path: string): Promise<Uint8Array> {
-    return await this.config.storage.read(path);
+    return await this.config.storage.read(this.cagePath(path));
   }
 
   /**
@@ -251,7 +331,7 @@ export class Uploader {
    * @returns 是否存在
    */
   async exists(path: string): Promise<boolean> {
-    return await this.config.storage.exists(path);
+    return await this.config.storage.exists(this.cagePath(path));
   }
 
   /**

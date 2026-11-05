@@ -28,7 +28,7 @@ Core features:
   resumable upload
 - **Security scanning**: File type detection, virus scanning, sensitive content
   detection
-- **Storage management**: Auto cleanup, quota management, file lifecycle
+- **Storage management**: Auto cleanup, optional `QuotaGuard`, file helpers
 
 ---
 
@@ -57,12 +57,12 @@ import { UploadClient } from "@dreamer/upload/client";
 
 ## Environment compatibility
 
-| Environment | Version | Status                               |
-| ----------- | ------- | ------------------------------------ |
-| **Deno**    | 2.5+    | ✅ Fully supported                   |
-| **Bun**     | 1.0+    | ✅ Fully supported                   |
-| **Server**  | -       | ✅ Supported (Deno and Bun runtimes) |
-| **Browser** | -       | ✅ Supported (client module)         |
+| Environment | Version | Status                                          |
+| ----------- | ------- | ----------------------------------------------- |
+| **Deno**    | 2.5+    | ✅ Fully supported                              |
+| **Bun**     | 1.3+    | ✅ Fully supported                              |
+| **Node.js** | 22+     | ✅ Fully supported (`@dreamer/runtime-adapter`) |
+| **Browser** | -       | ✅ Client module (`@dreamer/upload/client`)     |
 
 ---
 
@@ -457,7 +457,7 @@ const subdir = generateDateSubdir(); // "2026/01/30"
 | `isArchive(filename)`                 | Check if archive            | `boolean`                |
 | `validateFile(file, options)`         | Validate single file        | `FileValidationResult`   |
 | `validateFiles(files, options)`       | Validate multiple files     | `FileValidationResult[]` |
-| `isPathSafe(path)`                    | Check path safety           | `boolean`                |
+| `isPathSafe(path, basePath)`          | Check path safety           | `boolean`                |
 | `computeHash(data)`                   | Compute SHA-256 hash        | `Promise<string>`        |
 | `computeShortHash(data, length)`      | Compute short hash          | `Promise<string>`        |
 | `formatFileSize(bytes)`               | Format file size            | `string`                 |
@@ -538,15 +538,21 @@ const subdir = generateDateSubdir(); // "2026/01/30"
 
 **MultipartUploadHandlerConfig options:**
 
-| Option             | Type                                | Default | Description                |
-| ------------------ | ----------------------------------- | ------- | -------------------------- |
-| `storage`          | `CloudStorageAdapter`               | -       | Storage adapter (required) |
-| `maxPartSize`      | `number`                            | 100MB   | Max part size              |
-| `maxFileSize`      | `number`                            | 5GB     | Max file size              |
-| `allowedMimeTypes` | `string[]`                          | []      | Allowed MIME types         |
-| `pathPrefix`       | `string`                            | ""      | Upload path prefix         |
-| `generatePath`     | `(filename, meta) => string`        | -       | Custom path generator      |
-| `validate`         | `(filename, size, mime) => boolean` | -       | Custom validation function |
+| Option                       | Type                                | Default  | Description                               |
+| ---------------------------- | ----------------------------------- | -------- | ----------------------------------------- |
+| `storage`                    | `CloudStorageAdapter`               | -        | Storage adapter (required)                |
+| `maxPartSize`                | `number`                            | 100MB    | Max part size                             |
+| `maxFileSize`                | `number`                            | 5GB      | Max file size                             |
+| `allowedMimeTypes`           | `string[]`                          | []       | Allowed MIME types                        |
+| `pathPrefix`                 | `string`                            | ""       | Upload path prefix                        |
+| `generatePath`               | `(filename, meta) => string`        | -        | Custom path generator                     |
+| `validate`                   | `(filename, size, mime) => boolean` | -        | Custom validation                         |
+| `requireAuth`                | `boolean`                           | **true** | Require `authenticate` (BREAKING vs ≤1.1) |
+| `authenticate`               | `(req) => AuthContext \| null`      | -        | Auth hook                                 |
+| `verifyContentAfterComplete` | `boolean`                           | true     | Post-merge magic/content check            |
+| `verifyContentHeadBytes`     | `number`                            | 65536    | Range head size for verify                |
+| `sessionTtlMs`               | `number`                            | 24h      | In-memory session TTL                     |
+| `onEvent`                    | `(event) => void`                   | -        | Observability hook                        |
 
 ---
 
@@ -554,9 +560,21 @@ const subdir = generateDateSubdir(); // "2026/01/30"
 
 - **Chunked upload**: Large files auto-chunked, concurrent upload supported
 - **Resumable upload**: State persistence to avoid re-upload
-- **Streaming**: Lower memory usage
+- **Complete verify**: Range head (default 64 KiB), not full-object download
+- **local-cloud append merge**: peak memory ≈ one part (not full merged buffer)
+- **Optional streams**: `uploadStream` / `downloadStream` (local-cloud, S3); S3
+  streaming uses `UNSIGNED-PAYLOAD`
+- **AbortSignal** + session TTL sweep to bound in-memory sessions
 - **Connection reuse**: Adapters reuse HTTP connections internally
-- **Smart chunking**: Optimal part size computed from file size
+
+### Large files / memory
+
+- Prefer S3/OSS/COS multipart for multi-GB objects; local-cloud is for labs /
+  small-medium files.
+- Staging lives under `baseDir/.staging/<uploadId>/` with TTL cleanup on init /
+  `cleanupExpiredStaging`.
+- This package does **not** replace `@dreamer/storage`; adapters here are
+  upload-oriented.
 
 ---
 
@@ -575,32 +593,38 @@ See [TEST_REPORT.md](docs/en-US/TEST_REPORT.md) for the full test report.
 
 ---
 
+## Configuration (secure defaults)
+
+Full tables (name / type / **default** / meaning / dangerous changes /
+migration): [docs/en-US/CONFIGURATION.md](./docs/en-US/CONFIGURATION.md).
+
+Bypass matrix: [docs/en-US/BYPASS_MATRIX.md](./docs/en-US/BYPASS_MATRIX.md).
+
 ## Notes
 
-- **Server vs client**: Clearly separated via `/client` and `/server` subpaths
-- **Unified interface**: All storage adapters implement `CloudStorageAdapter`
-- **Cross-runtime**: Uses `@dreamer/runtime-adapter` for Deno/Bun
-- **S3-compatible mode**: OSS and COS adapters support S3-compatible mode (e.g.
-  MinIO for testing)
-- **Part size**: S3/MinIO require at least 5MB per part (except the last)
-- **Type safety**: Full TypeScript with complete type definitions for all APIs
+- **Auth default (1.2)**: `requireAuth: true` — wire `authenticate`.
+  `requireAuth: false` is **local/dev/tests only** — never production.
+- **Do not trust client MIME/extension**: magic bytes + forbidden lists; see
+  `docs/en-US/BYPASS_MATRIX.md`.
+- **Server vs client**: `/client` and `/server` subpaths; Node 22+ / Deno / Bun
+  via `@dreamer/runtime-adapter`.
+- **S3 part size**: non-final parts usually ≥ 5MB on S3/MinIO.
+- **Not a storage platform**: object lifecycle / CDN / bucket IAM belong in
+  `@dreamer/storage` or your cloud console.
+- **Limits**: not a replacement for real AV; no zip unpack entry in this
+  package.
 
----
+## Changelog## Changelog
 
-## Changelog
+### [1.2.0] (planned) — security + performance
 
-### [1.0.1] - 2026-03-27
+- **BREAKING**: `requireAuth` defaults to **true** (migrate: `authenticate` or
+  `requireAuth: false`).
+- Path cage, session binding, magic/content policy, bypass matrix.
+- Head Range verify, local-cloud append merge, streams + S3 `UNSIGNED-PAYLOAD`,
+  AbortSignal, `onEvent`, typed error codes.
 
-- **Added**: **`LocalCloudStorageAdapter`** /
-  **`createLocalCloudStorageAdapter`** (`@dreamer/upload/adapters`) — local-disk
-  **`CloudStorageAdapter`** with multipart staging for
-  **`MultipartUploadHandler`**. **`package.json`** aligned with **`deno.json`**
-  exports.
-- **Changed**: CI publish uses **`npx jsr publish`**; **`.gitignore`** updates.
-
-Full history: [CHANGELOG](docs/en-US/CHANGELOG.md).
-
----
+Full history: [docs/en-US/CHANGELOG.md](./docs/en-US/CHANGELOG.md).
 
 ## Contributing
 

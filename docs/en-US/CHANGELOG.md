@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased] → planned 1.2.0
+
+### Security
+
+- **BREAKING (behavior)**: `MultipartUploadHandler.requireAuth` defaults to
+  **true**. Writes without `authenticate` return 401.
+  - Migration: wire `authenticate`, or set `requireAuth: false` (dev/test only).
+- Path cage via `resolveSafePath` / `assertPathSafe` on local adapters and
+  Uploader.
+- Multipart session binding; post-merge content re-validation (default **head
+  Range**, see below); expanded forbidden ext/MIME; polyglot heuristics;
+  dangerous ACL denied by default; error redaction.
+- Bypass matrix: `docs/en-US/BYPASS_MATRIX.md`.
+
+### Performance / reliability
+
+- **Complete verify**: `verifyContentHeadBytes` (default 64 KiB) downloads only
+  the object head via Range instead of the full object.
+- **local-cloud merge**: `completeMultipartUpload` **appends parts in order**
+  (peak ≈ one part); etag sidecars avoid double SHA on list/complete.
+- Hot path: fewer defensive `.slice()` copies on digests / part writes.
+- Handler **session TTL sweep** (`cleanupExpiredSessions`, optional interval) +
+  staging TTL docs.
+- **AbortSignal** on handler Request, `uploadPart` options, `Uploader.upload`,
+  download/upload options.
+- **onEvent** observability hook; typed **`UploadErrorCode`** on JSON errors.
+
+### Added
+
+- `QuotaGuard`, `buildContentDisposition` (RFC 5987), auth hooks, overwrite 409,
+  staging TTL.
+- Optional **`uploadStream` / `downloadStream`** on `CloudStorageAdapter`
+  (implemented for local-cloud + S3).
+- S3 **`unsignedPayload` / `defaultUnsignedPayload`**: Signature V4
+  `UNSIGNED-PAYLOAD` for streaming / unknown-length bodies (buffered `upload`
+  still hashes by default).
+
+### Docs
+
+- **CONFIGURATION.md** (en): full config tables — secure defaults first, escape
+  hatches marked test/local only.
+- README: Node 22+, auth defaults, magic-byte policy, large-file / memory
+  guidance, storage boundary, changelog tip for 1.2.0 only.
+- BYPASS_MATRIX: head-verify residual + escape-hatch rows.
+
+### Still out of scope (HOLD)
+
+- Real antivirus engines; zip entry / zip-slip; upload@2 default flips; merging
+  into `@dreamer/storage`; GCS/Azure adapters without credentials/impl.
+
+---
+
 ## [1.1.0] - 2026-07-23
 
 ### Added
@@ -18,7 +70,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     collision with the class method).
   - `src/storage-manager.ts`: `Deno.env.toObject()` → `getEnvAll()`.
   - `src/scanner.ts`: `Deno.connect()` → runtime-adapter `connect()`; refactored
-    `conn.write()/read()` to stream-based `writable.getWriter()/readable.getReader()`.
+    `conn.write()/read()` to stream-based
+    `writable.getWriter()/readable.getReader()`.
 - **test:node** script (`tsx --test --test-force-exit tests/*.test.ts`) for the
   Node.js 22+ test runner.
 - **CI workflow** (9 jobs): 3 Deno v2.9 + 3 Bun + 3 Node 22

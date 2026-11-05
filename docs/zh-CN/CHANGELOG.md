@@ -7,6 +7,60 @@
 
 ---
 
+## [Unreleased] → 计划 1.2.0
+
+### 安全（加硬）
+
+- **BREAKING（行为）**：`MultipartUploadHandler` 的 `requireAuth` **默认
+  true**。未配置 `authenticate` 时拒写（401）。
+  - 迁移：接入 `authenticate`，或显式 `requireAuth: false`（仅推荐本地／测试）。
+- 路径牢笼：`resolveSafePath`／`assertPathSafe` 接入
+  `LocalCloudStorageAdapter`、`StorageManager`
+  本地适配、`Uploader.delete/read`。
+- 分片会话绑定：`uploadId → key/chunks/mime/authUserId`；忽略客户端篡改
+  key；越权续传 403。
+- 合并后二次魔数／内容策略（默认 **只拉对象头 Range**，见性能）；失败删除对象。
+- 默认禁止扩展名／MIME
+  扩大（js／html／svg／wasm／可执行等）；双扩展、空字节、全角点、RTL 归一。
+- `scanDangerousPayload`：HTML／SVG 冒充图片、GIF+script／PDF+MZ 浅层 polyglot。
+- 危险 ACL `public-read-write` 默认拒（`allowDangerousAcl`）。
+- 错误脱敏：`redactErrorMessage`；500 不回显绝对路径。
+- 绕过矩阵：见 `docs/zh-CN/BYPASS_MATRIX.md`。
+
+### 性能／可靠性
+
+- **二次校验**：`verifyContentHeadBytes`（默认 64KiB）经 Range
+  只下载对象头，避免 complete 全量进内存。
+- **local-cloud 合并**：`completeMultipartUpload` **顺序
+  append**（峰值≈单分片）；分片旁路 etag 免 list／complete 双重 SHA。
+- 热路径减少多余 `.slice()`；Handler **会话 TTL
+  周期扫**（`cleanupExpiredSessions`）；staging TTL 文档化。
+- **AbortSignal** 透传（Request／uploadPart／Uploader／上下载选项）。
+- **onEvent** 可观测钩子；JSON 错误带稳定 **`UploadErrorCode`**。
+
+### 新增
+
+- `QuotaGuard` 薄配额 API；`buildContentDisposition`（RFC 5987）。
+- `authenticate`／`authorizeUpload`／`overwrite: false → 409`／staging TTL
+  cleanup。
+- 可选 **`uploadStream`／`downloadStream`**（local-cloud + S3 已实现）。
+- S3 **`unsignedPayload`／`defaultUnsignedPayload`**：流式／未知长度用 Signature
+  V4 `UNSIGNED-PAYLOAD`（默认缓冲 `upload` 仍精确哈希）。
+
+### 文档
+
+- **CONFIGURATION.md**（中）：完整配置表——默认安全置顶，逃生开关标仅测／本地。
+- README：Node 22+、鉴权默认、魔数策略、大文件／内存指引、与 storage
+  边界；变更日志章节只留 1.2.0 摘要。
+- BYPASS_MATRIX：补头校验残留与逃生开关行。
+
+### 仍 HOLD
+
+- 真杀毒；无入口 zip；upload@2 改默认破坏；并入
+  `@dreamer/storage`；无凭证／实现的 GCS／Azure。
+
+---
+
 ## [1.1.0] - 2026-07-23
 
 ### 新增
@@ -14,13 +68,16 @@
 - **Node.js 22+ 兼容**：将全部 Deno 专属 API 替换为 `@dreamer/runtime-adapter`
   v1.2.2 的跨运行时等价 API：
   - `src/storage.ts`：`Deno.writeFile/readFile/remove/stat/mkdir` →
-    `writeFile/readFile/remove/stat/mkdir`（`mkdir` 别名为 `makeDir` 以避免与类方法冲突）。
+    `writeFile/readFile/remove/stat/mkdir`（`mkdir` 别名为 `makeDir`
+    以避免与类方法冲突）。
   - `src/storage-manager.ts`：`Deno.env.toObject()` → `getEnvAll()`。
   - `src/scanner.ts`：`Deno.connect()` → runtime-adapter `connect()`；将
-    `conn.write()/read()` 重构为流式 `writable.getWriter()/readable.getReader()`。
+    `conn.write()/read()` 重构为流式
+    `writable.getWriter()/readable.getReader()`。
 - **test:node** 脚本（`tsx --test --test-force-exit tests/*.test.ts`），适配
   Node.js 22+ 测试运行器。
-- **CI 工作流**（9 jobs）：3 Deno v2.9 + 3 Bun + 3 Node 22（Linux/macOS/Windows）。
+- **CI 工作流**（9 jobs）：3 Deno v2.9 + 3 Bun + 3 Node
+  22（Linux/macOS/Windows）。
 - **tsconfig.json** 与 **.npmrc**（`@jsr:registry`），供 Node/Bun 解析。
 - **minimumDependencyAge: 0**：deno.json 中新增。
 

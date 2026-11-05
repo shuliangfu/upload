@@ -4,7 +4,13 @@
  * 文件名处理、验证、哈希计算等工具函数
  */
 
-import { DEFAULT_FORBIDDEN_EXTENSIONS, MIME_TYPES } from "./constants.ts";
+import {
+  DANGEROUS_ACLS,
+  DEFAULT_FORBIDDEN_EXTENSIONS,
+  DEFAULT_FORBIDDEN_MIME_TYPES,
+  MIME_TYPES,
+} from "./constants.ts";
+import { resolve } from "@dreamer/runtime-adapter";
 import type {
   FileValidationInput,
   FileValidationOptions,
@@ -101,11 +107,13 @@ export function generateTimestampFilename(
   originalName: string,
   preserveExtension = true,
 ): string {
+  // 意图：时间戳前缀便于排序；必须先 sanitize，避免把路径分隔符／控制字符带进文件名。
+  const safe = sanitizeFilename(originalName) || "file";
   const timestamp = Date.now();
   if (preserveExtension) {
-    return `${timestamp}_${originalName}`;
+    return `${timestamp}_${safe}`;
   }
-  return `${timestamp}_${getBaseName(originalName)}`;
+  return `${timestamp}_${getBaseName(safe)}`;
 }
 
 /**
@@ -115,12 +123,62 @@ export function generateTimestampFilename(
  * @returns 清理后的文件名
  */
 export function sanitizeFilename(filename: string): string {
-  return filename
-    // deno-lint-ignore no-control-regex
-    .replace(/[<>:"/\\|?*\x00-\x1f]/g, "")
-    .replace(/^\.+/, "")
-    .replace(/\s+/g, "_")
-    .slice(0, 255);
+  // NFKC：全角点／兼容字符归一；再剥 RTL／控制符／空字节截断面
+  let s = filename.normalize("NFKC");
+  // 空字节及 C0／C1 控制符（含截断绕过）
+  // deno-lint-ignore no-control-regex
+  s = s.replace(/[\u0000-\u001f\u007f-\u009f]/g, "");
+  // RTL／LTR 嵌入与覆写（U+202A–U+202E、U+2066–U+2069）
+  s = s.replace(/[\u202a-\u202e\u2066-\u2069]/g, "");
+  // 路径分隔与 Windows 非法字符
+  s = s.replace(/[<>:"/\\|?*]/g, "");
+  s = s.replace(/^\.+/, "");
+  s = s.replace(/\s+/g, "_");
+  return s.slice(0, 255);
+}
+
+/**
+ * 为扩展名检查归一化文件名：NFKC、去 RTL、全角点→`.`、去空字节、小写。
+ *
+ * 为何与 sanitizeFilename 分开：sanitize 会删非法字符；本函数专供黑名单匹配，
+ * 保留点分结构以便检出 `file.php\0.jpg` 经归一后变成 `file.php.jpg` 类攻击。
+ */
+export function normalizeFilenameForPolicy(filename: string): string {
+  let s = filename.normalize("NFKC");
+  // deno-lint-ignore no-control-regex
+  s = s.replace(/[\u0000-\u001f\u007f-\u009f]/g, "");
+  s = s.replace(/[\u202a-\u202e\u2066-\u2069]/g, "");
+  // 各类「看起来像点」的字符 → ASCII 点
+  s = s.replace(/[．｡。﹒]/g, ".");
+  return s.toLowerCase();
+}
+
+// ============================================================================
+// 扩展名安全
+// ============================================================================
+
+/**
+ * 在文件名各段中查找禁止扩展名。
+ *
+ * 不变量：对 `a.php.jpg` 仍命中 `.php`（双扩展绕过）。
+ * 边界：隐藏文件 `.env` 的首段为空，从第二段起检查。
+ * 为何不只查最后一段：攻击者常用 `shell.php.png` 骗过只看末扩展名的校验。
+ *
+ * @param filename - 原始文件名
+ * @param forbidden - 禁止扩展名列表（含点号）
+ * @returns 命中的扩展名，未命中返回 null
+ */
+export function findForbiddenExtension(
+  filename: string,
+  forbidden: string[] = DEFAULT_FORBIDDEN_EXTENSIONS,
+): string | null {
+  const lower = normalizeFilenameForPolicy(filename);
+  const parts = lower.split(".");
+  for (let i = 1; i < parts.length; i++) {
+    const cand = "." + parts[i];
+    if (forbidden.includes(cand)) return cand;
+  }
+  return null;
 }
 
 // ============================================================================
@@ -151,14 +209,15 @@ export function validateFile(
     }
   }
 
-  const ext = getFileExtension(filename);
-
-  // 检查禁止的扩展名
+  // 检查禁止的扩展名（含双扩展：file.php.jpg）
   const forbiddenExts = options.forbiddenExtensions ||
     DEFAULT_FORBIDDEN_EXTENSIONS;
-  if (forbiddenExts.includes(ext)) {
-    return { valid: false, error: `禁止上传 ${ext} 类型的文件` };
+  const forbiddenHit = findForbiddenExtension(filename, forbiddenExts);
+  if (forbiddenHit) {
+    return { valid: false, error: `禁止上传 ${forbiddenHit} 类型的文件` };
   }
+
+  const ext = getFileExtension(filename);
 
   // 检查允许的扩展名
   if (options.allowedExtensions && options.allowedExtensions.length > 0) {
@@ -170,9 +229,11 @@ export function validateFile(
     }
   }
 
-  // 检查禁止的 MIME 类型
-  if (options.forbiddenMimeTypes && options.forbiddenMimeTypes.length > 0) {
-    for (const forbidden of options.forbiddenMimeTypes) {
+  // 检查禁止的 MIME 类型（默认含 html／svg／js／可执行）
+  const forbiddenMimes = options.forbiddenMimeTypes ??
+    DEFAULT_FORBIDDEN_MIME_TYPES;
+  if (forbiddenMimes.length > 0 && mimeType) {
+    for (const forbidden of forbiddenMimes) {
       if (matchMimeType(mimeType, forbidden)) {
         return { valid: false, error: `禁止上传 ${mimeType} 类型的文件` };
       }
@@ -247,6 +308,8 @@ const MAGIC_BYTES: Array<{
   extensions: string[];
   signature: number[];
   offset?: number;
+  /** 第二段签名（如 RIFF 后的 WEBP/WAVE），避免 WebP/WAV 互相误判 */
+  secondary?: { offset: number; bytes: number[] };
 }> = [
   // 图片
   {
@@ -267,8 +330,9 @@ const MAGIC_BYTES: Array<{
   {
     mimeType: "image/webp",
     extensions: [".webp"],
-    signature: [0x52, 0x49, 0x46, 0x46],
-  }, // RIFF
+    signature: [0x52, 0x49, 0x46, 0x46], // RIFF
+    secondary: { offset: 8, bytes: [0x57, 0x45, 0x42, 0x50] }, // WEBP
+  },
   { mimeType: "image/bmp", extensions: [".bmp"], signature: [0x42, 0x4D] },
   {
     mimeType: "image/tiff",
@@ -346,8 +410,9 @@ const MAGIC_BYTES: Array<{
   {
     mimeType: "audio/wav",
     extensions: [".wav"],
-    signature: [0x52, 0x49, 0x46, 0x46],
-  }, // RIFF
+    signature: [0x52, 0x49, 0x46, 0x46], // RIFF
+    secondary: { offset: 8, bytes: [0x57, 0x41, 0x56, 0x45] }, // WAVE
+  },
   {
     mimeType: "audio/ogg",
     extensions: [".ogg"],
@@ -382,9 +447,22 @@ export function detectMimeType(content: Uint8Array): string | null {
         break;
       }
     }
-    if (match) {
-      return entry.mimeType;
+    if (!match) continue;
+
+    if (entry.secondary) {
+      const s = entry.secondary;
+      if (content.length < s.offset + s.bytes.length) continue;
+      let sec = true;
+      for (let i = 0; i < s.bytes.length; i++) {
+        if (content[s.offset + i] !== s.bytes[i]) {
+          sec = false;
+          break;
+        }
+      }
+      if (!sec) continue;
     }
+
+    return entry.mimeType;
   }
   return null;
 }
@@ -402,12 +480,7 @@ export function validateMimeType(
 ): { valid: boolean; detected?: string; error?: string } {
   const detected = detectMimeType(content);
 
-  // 如果无法检测，允许通过（可能是文本文件或未知格式）
-  if (detected === null) {
-    return { valid: true };
-  }
-
-  // 检查是否是危险类型
+  // 魔数检出危险可执行／Mach-O 一律拒（不信声明）
   if (
     detected === "application/x-executable" ||
     detected === "application/x-mach-binary"
@@ -419,7 +492,50 @@ export function validateMimeType(
     };
   }
 
-  // 检查类型前缀是否匹配（如 image/jpeg vs image/png 都是图片）
+  // 声明本身在默认 MIME 黑名单
+  for (const forbidden of DEFAULT_FORBIDDEN_MIME_TYPES) {
+    if (matchMimeType(declaredMimeType, forbidden)) {
+      return {
+        valid: false,
+        detected: detected ?? undefined,
+        error: `禁止上传 ${declaredMimeType} 类型的文件`,
+      };
+    }
+  }
+
+  // 内容扫描：HTML／SVG／脚本嵌入（堵住「冒充 image/jpeg」）
+  const payload = scanDangerousPayload(content);
+  if (payload) {
+    return {
+      valid: false,
+      detected: detected ?? payload,
+      error: `检测到危险内容: ${payload}`,
+    };
+  }
+
+  // 无法魔数识别：对「声称是图片／音视频」仍要求魔数命中，防纯文本冒充
+  if (detected === null) {
+    const prefix = declaredMimeType.split("/")[0] ?? "";
+    if (prefix === "image" || prefix === "audio" || prefix === "video") {
+      return {
+        valid: false,
+        error: `无法通过魔数验证 ${declaredMimeType}，拒绝上传`,
+      };
+    }
+    return { valid: true };
+  }
+
+  // 检出类型在黑名单（如把 svg 魔数当图）
+  for (const forbidden of DEFAULT_FORBIDDEN_MIME_TYPES) {
+    if (matchMimeType(detected, forbidden)) {
+      return {
+        valid: false,
+        detected,
+        error: `检测到禁止类型 ${detected}`,
+      };
+    }
+  }
+
   const declaredPrefix = declaredMimeType.split("/")[0];
   const detectedPrefix = detected.split("/")[0];
 
@@ -432,6 +548,147 @@ export function validateMimeType(
   }
 
   return { valid: true, detected };
+}
+
+/**
+ * 扫描内容中的危险载荷（无害启发式，非杀毒）。
+ *
+ * 覆盖：HTML／SVG／PHP／脚本头、GIF／PNG 后夹脚本的浅层 polyglot、PDF 内嵌 MZ。
+ * 边界：只看前 8KiB + 全文件对短标记的抽样；不替代专业 AV。
+ */
+export function scanDangerousPayload(content: Uint8Array): string | null {
+  if (content.length === 0) return null;
+  const headLen = Math.min(content.length, 8192);
+  const head = content.subarray(0, headLen);
+  let text = "";
+  for (let i = 0; i < head.length; i++) {
+    text += String.fromCharCode(head[i]!);
+  }
+  const lower = text.toLowerCase();
+
+  const isGif = content.length >= 6 &&
+    content[0] === 0x47 && content[1] === 0x49 && content[2] === 0x46;
+  const isPng = content.length >= 8 &&
+    content[0] === 0x89 && content[1] === 0x50 && content[2] === 0x4e &&
+    content[3] === 0x47;
+  const isPdf = content.length >= 5 &&
+    content[0] === 0x25 && content[1] === 0x50 && content[2] === 0x44 &&
+    content[3] === 0x46;
+
+  // Polyglot 优先于泛 HTML：GIF／PNG 头后夹脚本
+  if (
+    (isGif || isPng) && (lower.includes("<script") || lower.includes("<?php"))
+  ) {
+    return "polyglot-script";
+  }
+  if (isPdf) {
+    const scan = Math.min(content.length, 65536);
+    for (let i = 4; i < scan - 1; i++) {
+      if (content[i] === 0x4d && content[i + 1] === 0x5a) {
+        return "polyglot-pdf-exe";
+      }
+    }
+  }
+
+  // SVG 先于泛 <script>（svg 内常含 script）
+  if (lower.includes("<svg") || lower.includes("image/svg")) {
+    return "image/svg+xml";
+  }
+  if (
+    lower.includes("<!doctype html") || lower.includes("<html") ||
+    lower.includes("<script")
+  ) {
+    return "text/html";
+  }
+  if (
+    lower.includes("<?php") || lower.includes("<?= ") ||
+    lower.includes("<%")
+  ) {
+    return "text/x-php";
+  }
+  return null;
+}
+
+export function validateContentExtensionConsistency(
+  filename: string,
+  content: Uint8Array,
+  declaredMimeType?: string,
+): { valid: boolean; error?: string; detected?: string } {
+  const ext = getFileExtension(normalizeFilenameForPolicy(filename));
+  const fromExt = ext ? MIME_TYPES[ext] : undefined;
+  const magic = validateMimeType(
+    content,
+    declaredMimeType || fromExt || "application/octet-stream",
+  );
+  if (!magic.valid) return magic;
+
+  if (fromExt && magic.detected) {
+    // 主类型不同，或同为 image／audio／video 但具体 MIME 不同（png vs gif）均拒
+    if (fromExt !== magic.detected) {
+      const a = fromExt.split("/")[0];
+      const b = magic.detected.split("/")[0];
+      // application/octet-stream 等宽松类型仅比主类型
+      const loose = fromExt === "application/octet-stream" ||
+        magic.detected === "application/octet-stream";
+      if (
+        !loose && (a !== b || a === "image" || a === "audio" || a === "video")
+      ) {
+        return {
+          valid: false,
+          detected: magic.detected,
+          error:
+            `扩展名 ${ext}（${fromExt}）与内容类型 ${magic.detected} 不一致`,
+        };
+      }
+      if (a !== b) {
+        return {
+          valid: false,
+          detected: magic.detected,
+          error: `扩展名 ${ext} 与内容类型 ${magic.detected} 不一致`,
+        };
+      }
+    }
+  }
+
+  // 扩展名在黑名单（双扩展已在 findForbiddenExtension 覆盖；此处兜底）
+  const hit = findForbiddenExtension(filename);
+  if (hit) {
+    return { valid: false, error: `禁止上传 ${hit} 类型的文件` };
+  }
+
+  return { valid: true, detected: magic.detected };
+}
+
+/**
+ * 统一上传内容策略入口（Uploader／合并后二次校验共用）。
+ */
+export function validateUploadContent(
+  filename: string,
+  content: Uint8Array,
+  declaredMimeType?: string,
+): { valid: boolean; error?: string; detected?: string } {
+  return validateContentExtensionConsistency(
+    filename,
+    content,
+    declaredMimeType,
+  );
+}
+
+/**
+ * 脱敏错误信息：去掉绝对路径与过长内部键，避免 500／400 回显。
+ */
+export function redactErrorMessage(message: string): string {
+  let m = message;
+  // Unix / Windows 绝对路径
+  m = m.replace(/(?:\/[\w.-]+)+/g, "[path]");
+  m = m.replace(
+    /[A-Za-z]:\\(?:[^\\/:*?"<>|\r\n]+\\)*[^\\/:*?"<>|\r\n]*/g,
+    "[path]",
+  );
+  // 过长 key
+  m = m.replace(/[a-f0-9-]{36}(?:\/[\w.-]+)*/gi, "[key]");
+  if (m.length > 200) m = m.slice(0, 200) + "…";
+  return m;
 }
 
 // ============================================================================
@@ -517,46 +774,184 @@ export function isHiddenFile(filename: string): boolean {
 }
 
 /**
- * 安全检查文件路径（防止目录遍历攻击）
+ * 安全检查相对路径（防止目录遍历攻击）。
  *
- * @param path - 要检查的路径
- * @param basePath - 基础目录
+ * 签名：`isPathSafe(relativePath, basePath)` —— 两个参数；旧文档写单参已纠正。
+ * 不变量：含 `..`、绝对路径、空字节、反斜杠一律拒绝。
+ * 真正落盘前请再调用 {@link resolveSafePath}（resolve 后 startsWith baseDir）。
+ *
+ * @param path - 相对路径（对象键／文件名段）
+ * @param basePath - 基础目录（用于字符串级拼接校验）
  * @returns 路径是否安全
  */
 export function isPathSafe(path: string, basePath: string): boolean {
-  // 1. 检查空路径
   if (!path || path.trim() === "") return false;
-
-  // 2. 检查显式的目录遍历
   if (path.includes("..")) return false;
-
-  // 3. 检查绝对路径
-  if (path.startsWith("/") || path.match(/^[A-Za-z]:/)) return false;
-
-  // 4. 检查空字节和反斜杠
+  if (path.startsWith("/") || /^[A-Za-z]:/.test(path)) return false;
   if (path.includes("\0") || path.includes("\\")) return false;
 
-  // 5. 检查 URL 编码的遍历尝试
-  const decoded = decodeURIComponent(path);
-  if (
-    decoded.includes("..") || decoded !== path.replace(/%[0-9A-Fa-f]{2}/g, "X")
-  ) {
-    // 如果解码后包含 .. 或解码后与原始不同（可能是编码攻击）
-    if (decoded.includes("..")) return false;
+  let decoded = path;
+  try {
+    decoded = decodeURIComponent(path);
+  } catch {
+    return false;
   }
+  if (decoded.includes("..") || decoded.includes("\0")) return false;
 
-  // 6. 检查隐藏文件（可选，根据需求）
-  // if (path.split("/").some(segment => segment.startsWith("."))) return false;
-
-  // 7. 规范化路径并验证
   const normalizedPath = path.replace(/\/+/g, "/").replace(/^\.\//, "");
+  if (!normalizedPath || normalizedPath.startsWith("/")) return false;
   const normalizedBase = basePath.replace(/\/+$/, "");
   const fullPath = `${normalizedBase}/${normalizedPath}`;
-
-  // 8. 确保最终路径仍在基础目录内
   if (!fullPath.startsWith(normalizedBase + "/")) return false;
 
   return true;
+}
+
+/** UUID v1–v5 形态（multipart uploadId／staging 目录名必须符合） */
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * 校验字符串是否为 UUID。
+ *
+ * @param id - 候选 ID
+ */
+export function isUuid(id: string): boolean {
+  return UUID_RE.test(id);
+}
+
+/**
+ * 清理对象键：去掉空段／`.`／`..`，并对每段 {@link sanitizeFilename}。
+ *
+ * 为何不只靠 isPathSafe：客户端可能传 `foo/./bar` 或脏字符，需归一化后再笼。
+ *
+ * @param key - 原始对象键
+ * @returns 清理后的相对键；全空则返回空串
+ */
+export function sanitizeObjectKey(key: string): string {
+  return key
+    .split("/")
+    .map((seg) => sanitizeFilename(seg))
+    .filter((seg) => seg.length > 0 && seg !== "." && seg !== "..")
+    .join("/");
+}
+
+/**
+ * 在 baseDir 牢笼内 resolve 相对键；越界抛错。
+ *
+ * 不变量：返回值 === resolve(baseDir, key) 且必须以 resolve(baseDir) 为前缀
+ * （目录边界用尾 `/`，避免 `/uploads` 匹配 `/uploads-evil`）。
+ *
+ * @param baseDir - 根目录
+ * @param relativeKey - 相对键（不得绝对、不得含 `..`）
+ * @returns 绝对安全路径
+ */
+export function resolveSafePath(baseDir: string, relativeKey: string): string {
+  if (!isPathSafe(relativeKey, baseDir)) {
+    throw new Error(`Unsafe path rejected: ${relativeKey}`);
+  }
+  const resolvedBase = resolve(baseDir);
+  const resolved = resolve(baseDir, relativeKey);
+  const basePrefix = resolvedBase.endsWith("/")
+    ? resolvedBase
+    : resolvedBase + "/";
+  if (resolved !== resolvedBase && !resolved.startsWith(basePrefix)) {
+    throw new Error(`Path escapes baseDir: ${relativeKey}`);
+  }
+  return resolved;
+}
+
+/**
+ * 断言路径安全；失败抛错（供适配器／Uploader 统一接线）。
+ */
+export function assertPathSafe(baseDir: string, relativeKey: string): string {
+  return resolveSafePath(baseDir, relativeKey);
+}
+
+/**
+ * 拒绝危险 ACL，除非显式允许。
+ *
+ * @param acl - 请求的 ACL
+ * @param allowDangerousAcl - 是否允许 public-read-write
+ */
+export function assertSafeAcl(
+  acl: string | undefined,
+  allowDangerousAcl = false,
+): void {
+  if (!acl) return;
+  if (
+    (DANGEROUS_ACLS as readonly string[]).includes(acl) && !allowDangerousAcl
+  ) {
+    throw new Error(
+      `Dangerous ACL "${acl}" rejected; set allowDangerousAcl: true to override`,
+    );
+  }
+}
+
+/**
+ * RFC 5987 Content-Disposition（filename + filename*）。
+ *
+ * 为何不单用 encodeURIComponent 包在 filename="..."：老客户端要 ASCII fallback，
+ * 现代客户端读 filename*。
+ *
+ * @param filename - 展示文件名（会再 sanitize）
+ * @param download - true → attachment，否则 inline
+ */
+export function buildContentDisposition(
+  filename: string,
+  download = false,
+): string {
+  const safe = sanitizeFilename(filename) || "download";
+  const ascii = safe.replace(/[^\x20-\x7E]/g, "_").replace(/["\\]/g, "_");
+  const encoded = encodeURIComponent(safe).replace(/['()]/g, escape);
+  const type = download ? "attachment" : "inline";
+  return `${type}; filename="${ascii}"; filename*=UTF-8''${encoded}`;
+}
+
+/**
+ * 薄配额守卫（内存计数）。
+ *
+ * 意图：补齐 README 曾宣称但未实现的「配额」能力；默认不强制接入，避免破坏现有用法。
+ * 边界：进程内有效，不跨实例；生产应接外部配额源。
+ */
+export class QuotaGuard {
+  private usedBytes: number;
+
+  constructor(
+    private readonly maxBytes: number,
+    usedBytes = 0,
+  ) {
+    this.usedBytes = usedBytes;
+  }
+
+  /** 当前快照 */
+  snapshot(): { usedBytes: number; maxBytes: number; remainingBytes: number } {
+    return {
+      usedBytes: this.usedBytes,
+      maxBytes: this.maxBytes,
+      remainingBytes: Math.max(0, this.maxBytes - this.usedBytes),
+    };
+  }
+
+  /** 是否还能再接收 size 字节 */
+  canAccept(size: number): boolean {
+    return this.usedBytes + size <= this.maxBytes;
+  }
+
+  /** 预留；不足则抛错 */
+  reserve(size: number): void {
+    if (!this.canAccept(size)) {
+      throw new Error(
+        `Quota exceeded: need ${size}, remaining ${this.snapshot().remainingBytes}`,
+      );
+    }
+    this.usedBytes += size;
+  }
+
+  /** 释放（删除文件后） */
+  release(size: number): void {
+    this.usedBytes = Math.max(0, this.usedBytes - size);
+  }
 }
 
 // ============================================================================
@@ -648,9 +1043,7 @@ export function createFileResponse(
   } = {},
 ): Response {
   const mimeType = options.mimeType || getMimeType(filename);
-  const disposition = options.download
-    ? `attachment; filename="${encodeURIComponent(filename)}"`
-    : `inline; filename="${encodeURIComponent(filename)}"`;
+  const disposition = buildContentDisposition(filename, !!options.download);
 
   const headers: Record<string, string> = {
     "Content-Type": mimeType,

@@ -1,4 +1,4 @@
-# @dreamer/upload configuration (1.2.0)
+# @dreamer/upload configuration (2.0.0)
 
 **Secure-by-default.** Prefer leaving security toggles at their defaults. Escape
 hatches are for **local/dev/tests only** unless you fully understand the risk.
@@ -27,7 +27,7 @@ Related: [BYPASS_MATRIX.md](./BYPASS_MATRIX.md) · [CHANGELOG.md](./CHANGELOG.md
 // Before ≤1.1 (anonymous writes worked with no authenticate)
 new MultipartUploadHandler({ storage });
 
-// 1.2 production
+// 2.0 production
 new MultipartUploadHandler({
   storage,
   authenticate: async (req) => {

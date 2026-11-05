@@ -602,7 +602,7 @@ Bypass matrix: [docs/en-US/BYPASS_MATRIX.md](./docs/en-US/BYPASS_MATRIX.md).
 
 ## Notes
 
-- **Auth default (1.2)**: `requireAuth: true` — wire `authenticate`.
+- **Auth default (2.0)**: `requireAuth: true` — wire `authenticate`.
   `requireAuth: false` is **local/dev/tests only** — never production.
 - **Do not trust client MIME/extension**: magic bytes + forbidden lists; see
   `docs/en-US/BYPASS_MATRIX.md`.
@@ -614,9 +614,9 @@ Bypass matrix: [docs/en-US/BYPASS_MATRIX.md](./docs/en-US/BYPASS_MATRIX.md).
 - **Limits**: not a replacement for real AV; no zip unpack entry in this
   package.
 
-## Changelog## Changelog
+## Changelog
 
-### [1.2.0] (planned) — security + performance
+### [2.0.0] - 2026-11-05 — security + performance (major)
 
 - **BREAKING**: `requireAuth` defaults to **true** (migrate: `authenticate` or
   `requireAuth: false`).

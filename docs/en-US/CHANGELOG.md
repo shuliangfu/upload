@@ -7,13 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [Unreleased] → planned 1.2.0
+## [2.0.0] - 2026-11-05
+
+### BREAKING
+
+- `MultipartUploadHandler.requireAuth` defaults to **true**. Writes without
+  `authenticate` return **401**.
+  - **Migration**: wire `authenticate` for production, **or** set
+    `requireAuth: false` explicitly (local/dev/test only — do not disable in
+    production).
 
 ### Security
 
-- **BREAKING (behavior)**: `MultipartUploadHandler.requireAuth` defaults to
-  **true**. Writes without `authenticate` return 401.
-  - Migration: wire `authenticate`, or set `requireAuth: false` (dev/test only).
 - Path cage via `resolveSafePath` / `assertPathSafe` on local adapters and
   Uploader.
 - Multipart session binding; post-merge content re-validation (default **head
@@ -49,7 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **CONFIGURATION.md** (en): full config tables — secure defaults first, escape
   hatches marked test/local only.
 - README: Node 22+, auth defaults, magic-byte policy, large-file / memory
-  guidance, storage boundary, changelog tip for 1.2.0 only.
+  guidance, storage boundary, changelog tip for 2.0.0 only.
 - BYPASS_MATRIX: head-verify residual + escape-hatch rows.
 
 ### Still out of scope (HOLD)

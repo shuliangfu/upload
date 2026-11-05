@@ -577,7 +577,7 @@ const subdir = generateDateSubdir(); // "2026/01/30"
 
 ### 测试统计
 
-- 以本地／CI 当次全量结果为准（Deno + Bun + Node）；安全＋1.2 烟雾用例已纳入
+- 以本地／CI 当次全量结果为准（Deno + Bun + Node）；安全＋2.0 烟雾用例已纳入
   `tests/`。
 
 ---
@@ -590,7 +590,7 @@ const subdir = generateDateSubdir(); // "2026/01/30"
 
 ## 📝 注意事项
 
-- **鉴权默认（1.2）**：`requireAuth: true`——请接入
+- **鉴权默认（2.0）**：`requireAuth: true`——请接入
   `authenticate`。`requireAuth: false` **仅测／本地**，生产禁止。
 - **勿信任客户端 MIME／扩展名**：魔数＋黑名单；见
   `docs/zh-CN/BYPASS_MATRIX.md`。
@@ -604,7 +604,7 @@ const subdir = generateDateSubdir(); // "2026/01/30"
 
 ## 变更日志
 
-### [1.2.0]（计划）— 安全＋性能
+### [2.0.0] - 2026-11-05 — 安全＋性能（major）
 
 - **BREAKING**：`requireAuth` 默认 **true**（迁移：接 `authenticate` 或
   `requireAuth: false`）。

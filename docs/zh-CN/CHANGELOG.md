@@ -7,13 +7,17 @@
 
 ---
 
-## [Unreleased] → 计划 1.2.0
+## [2.0.0] - 2026-11-05
+
+### BREAKING
+
+- `MultipartUploadHandler.requireAuth` **默认 true**。未配置 `authenticate`
+  时拒写（**401**）。
+  - **迁移**：生产接入 `authenticate`，**或**显式设置
+    `requireAuth: false`（仅本地／开发／测试——生产勿关）。
 
 ### 安全（加硬）
 
-- **BREAKING（行为）**：`MultipartUploadHandler` 的 `requireAuth` **默认
-  true**。未配置 `authenticate` 时拒写（401）。
-  - 迁移：接入 `authenticate`，或显式 `requireAuth: false`（仅推荐本地／测试）。
 - 路径牢笼：`resolveSafePath`／`assertPathSafe` 接入
   `LocalCloudStorageAdapter`、`StorageManager`
   本地适配、`Uploader.delete/read`。
@@ -51,7 +55,7 @@
 
 - **CONFIGURATION.md**（中）：完整配置表——默认安全置顶，逃生开关标仅测／本地。
 - README：Node 22+、鉴权默认、魔数策略、大文件／内存指引、与 storage
-  边界；变更日志章节只留 1.2.0 摘要。
+  边界；变更日志章节只留 2.0.0 摘要。
 - BYPASS_MATRIX：补头校验残留与逃生开关行。
 
 ### 仍 HOLD

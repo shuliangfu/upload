@@ -1,9 +1,9 @@
-# @dreamer/upload bypass matrix (1.2.0 hardening)
+# @dreamer/upload bypass matrix (2.0.0 hardening)
 
 Fixtures are **harmless stand-ins** (truncated headers / string markers), not
 real malware.
 
-| Attack surface                                                 | Pre-1.2                          | Bypassable?                               | This campaign                                                                                                       | Tests                            |
+| Attack surface                                                 | Pre-2.0                          | Bypassable?                               | This campaign                                                                                                       | Tests                            |
 | -------------------------------------------------------------- | -------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
 | Path traversal `../` / absolute write (local-cloud / Uploader) | `isPathSafe` unwired; raw `join` | Yes                                       | Closed: `resolveSafePath` / `assertPathSafe`                                                                        | `tests/security.test.ts` P0-path |
 | Staging `uploadId=../../`                                      | No UUID check                    | Yes                                       | Closed: `isUuid`                                                                                                    | LocalCloud non-UUID              |

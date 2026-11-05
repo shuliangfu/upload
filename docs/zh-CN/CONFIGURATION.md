@@ -1,4 +1,4 @@
-# @dreamer/upload 配置说明（1.2.0）
+# @dreamer/upload 配置说明（2.0.0）
 
 **默认即安全。** 生产请保持安全相关默认；逃生开关仅用于
 **本地／开发／测试**，除非你完全清楚风险。
@@ -27,7 +27,7 @@
 // ≤1.1：无 authenticate 也可匿名写
 new MultipartUploadHandler({ storage });
 
-// 1.2 生产
+// 2.0 生产
 new MultipartUploadHandler({
   storage,
   authenticate: async (req) => {

@@ -9,6 +9,7 @@
  * - **requireAuth 默认 true**：未配置 authenticate 则拒写（401）。1.x 迁移：显式
  *   `requireAuth: false` 或接入 `authenticate`。
  * - 分片合并后二次魔数／内容策略校验（默认只拉对象头 N KiB，可配）；失败则尽量删除对象。
+ * - 可选 virusScan（默认关）：complete 全量杀毒；enable 时不通过则删对象＋422。
  * - 内存会话按 TTL 惰性失效 + 周期／显式 cleanupExpiredSessions 扫除。
  * - body.path／filename 经 sanitize；默认扩展名／MIME 黑名单；不信客户端 Content-Type。
  * - 500／错误响应脱敏，不回显绝对路径／内部键。
@@ -43,6 +44,10 @@ import {
   sanitizeObjectKey,
   validateUploadContent,
 } from "../utils.ts";
+import {
+  ClamAVScanner,
+  type VirusScannerInterface,
+} from "../scanner.ts";
 
 // ============================================================================
 // 类型定义
@@ -101,6 +106,35 @@ export const UploadErrorCode = {
 
 export type UploadErrorCode =
   typeof UploadErrorCode[keyof typeof UploadErrorCode];
+
+/**
+ * complete 路径可选病毒扫描（默认关）。
+ *
+ * - `false`／省略 → 不扫
+ * - `{ enable: true, … }` → complete 合并后全量扫；不通过则删对象＋拒传
+ * - `required`（默认 true）：引擎不可用／扫描异常时拒传；`false` 则降级放行并打 warn
+ * - `scanner`：注入自定义／假引擎（单测）；缺省用 {@link ClamAVScanner}
+ */
+export interface VirusScanOptions {
+  /** 是否启用；默认 false */
+  enable?: boolean;
+  /** 引擎不可用或扫描异常时是否拒传；默认 true */
+  required?: boolean;
+  /** clamd host，默认 127.0.0.1 */
+  host?: string;
+  /** clamd port，默认 3310 */
+  port?: number;
+  /** 扫描超时（毫秒），传给 ClamAVScanner */
+  timeout?: number;
+  /** 注入扫描器（单测／自定义）；缺省 ClamAV(host/port) */
+  scanner?: VirusScannerInterface;
+}
+
+/** 规范化后的杀毒配置（内部用） */
+interface ResolvedVirusScan {
+  required: boolean;
+  scanner: VirusScannerInterface;
+}
 
 /**
  * 服务端处理器配置
@@ -187,6 +221,11 @@ export interface MultipartUploadHandlerConfig {
   onEvent?: (event: UploadServerEvent) => void;
   /** 额外禁止扩展名（默认合并 DEFAULT_FORBIDDEN_EXTENSIONS） */
   forbiddenExtensions?: string[];
+  /**
+   * complete 路径病毒扫描。默认关。
+   * `false`／省略＝不扫；`{ enable: true }`＝开 ClamAV（可配 host／port／required／scanner）。
+   */
+  virusScan?: false | VirusScanOptions;
 }
 
 /**
@@ -351,6 +390,7 @@ export class MultipartUploadHandler {
     sessionCleanupIntervalMs: number;
     onEvent?: MultipartUploadHandlerConfig["onEvent"];
     forbiddenExtensions: string[];
+    virusScan: ResolvedVirusScan | null;
   };
 
   /** uploadId → 会话 */
@@ -385,8 +425,29 @@ export class MultipartUploadHandler {
       onEvent: config.onEvent,
       forbiddenExtensions: config.forbiddenExtensions ??
         [...DEFAULT_FORBIDDEN_EXTENSIONS],
+      virusScan: MultipartUploadHandler.resolveVirusScan(config.virusScan),
     };
     this.startSessionCleanupTimer();
+  }
+
+  /**
+   * 解析 virusScan：默认关；仅 enable===true 时接线。
+   */
+  private static resolveVirusScan(
+    raw: MultipartUploadHandlerConfig["virusScan"],
+  ): ResolvedVirusScan | null {
+    if (!raw) return null; // false／undefined → 关
+    if (raw.enable !== true) return null;
+    const scanner = raw.scanner ??
+      new ClamAVScanner({
+        host: raw.host ?? "127.0.0.1",
+        port: raw.port ?? 3310,
+        timeout: raw.timeout,
+      });
+    return {
+      required: raw.required ?? true,
+      scanner,
+    };
   }
 
   /**
@@ -825,6 +886,9 @@ export class MultipartUploadHandler {
       );
 
       session.parts.set(index, { etag: result.etag, size: data.length });
+      // Sliding TTL: activity extends expiry so short sessionTtlMs cannot
+      // race-expire mid upload on slow runners / large parts.
+      session.expiresAt = Date.now() + this.config.sessionTtlMs;
       this.emit({ type: "chunk", uploadId, key: session.key });
 
       const response: ChunkResponse = {
@@ -988,6 +1052,86 @@ export class MultipartUploadHandler {
             400,
             UploadErrorCode.CONTENT_REJECTED,
           );
+        }
+      }
+
+      // 可选病毒扫描（默认关）：全量 download → scanner；不通过则删对象＋422。
+      // 不变量：verifyContent ≠ 杀毒；本段可同步拒传（非 onEvent 旁路）。
+      if (this.config.virusScan) {
+        const vs = this.config.virusScan;
+        const rejectVirus = async (
+          message: string,
+          threats?: string[],
+        ): Promise<Response> => {
+          try {
+            await this.config.storage.delete(session.key);
+          } catch {
+            // 尽力删除
+          }
+          this.sessions.delete(body.uploadId);
+          this.emit({
+            type: "error",
+            uploadId: body.uploadId,
+            key: session.key,
+            code: UploadErrorCode.CONTENT_REJECTED,
+            status: 422,
+          });
+          return this.jsonResponse(
+            {
+              error: message,
+              code: UploadErrorCode.CONTENT_REJECTED,
+              ...(threats && threats.length ? { threats } : {}),
+            },
+            422,
+          );
+        };
+
+        let available = false;
+        try {
+          available = await vs.scanner.isAvailable();
+        } catch {
+          available = false;
+        }
+
+        if (!available) {
+          if (vs.required) {
+            return await rejectVirus("Virus scanner unavailable");
+          }
+          console.warn(
+            `[upload] virus scanner unavailable; allowing upload (required=false)`,
+          );
+        } else {
+          try {
+            const full = await this.config.storage.download(session.key, {
+              signal: request.signal,
+            });
+            const scanResult = await vs.scanner.scan(full, session.filename);
+            if (!scanResult.safe) {
+              const threats = scanResult.threats?.length
+                ? scanResult.threats
+                : scanResult.metadata?.error
+                ? [String(scanResult.metadata.error)]
+                : undefined;
+              return await rejectVirus(
+                threats?.length ? "Malware detected" : "Virus scan failed",
+                Array.isArray(threats) ? threats : undefined,
+              );
+            }
+          } catch (scanErr) {
+            const msg = scanErr instanceof Error
+              ? scanErr.message
+              : String(scanErr);
+            console.error(
+              "[upload] virus scan error:",
+              redactErrorMessage(msg),
+            );
+            if (vs.required) {
+              return await rejectVirus("Virus scan failed");
+            }
+            console.warn(
+              "[upload] virus scan error; allowing upload (required=false)",
+            );
+          }
         }
       }
 

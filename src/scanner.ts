@@ -133,6 +133,85 @@ export interface MultiScannerConfig {
 // ClamAV 扫描器
 // ============================================================================
 
+/** Strip ClamAV z-protocol NULs (`PONG\0`, `stream: OK\0`). */
+function stripClamText(s: string): string {
+  return s.replace(/\0/g, "").trim();
+}
+
+type ClamTcpConn = {
+  write(data: Uint8Array): Promise<void>;
+  read(max?: number): Promise<Uint8Array>;
+  close(): void;
+};
+
+/**
+ * Prefer Deno.connect when present — runtime-adapter `connect` has been observed
+ * to mis-handle zINSTREAM / NUL replies (empty → false-safe; PING NUL → false down).
+ * Fall back to `@dreamer/runtime-adapter` connect for Bun/Node.
+ */
+async function openClamTcp(host: string, port: number): Promise<ClamTcpConn> {
+  const DenoRef = (globalThis as {
+    Deno?: {
+      connect: (opts: { hostname: string; port: number }) => Promise<{
+        write: (data: Uint8Array) => Promise<number>;
+        read: (buf: Uint8Array) => Promise<number | null>;
+        close: () => void;
+      }>;
+    };
+  }).Deno;
+
+  if (DenoRef?.connect) {
+    const conn = await DenoRef.connect({ hostname: host, port });
+    return {
+      write: async (data) => {
+        await conn.write(data);
+      },
+      read: async (max = 512) => {
+        const buf = new Uint8Array(max);
+        const n = await conn.read(buf);
+        return buf.subarray(0, n ?? 0);
+      },
+      close: () => {
+        try {
+          conn.close();
+        } catch {
+          /* ignore */
+        }
+      },
+    };
+  }
+
+  const conn = await connect({ host, port });
+  const writer = conn.writable.getWriter();
+  const reader = conn.readable.getReader();
+  return {
+    write: async (data) => {
+      await writer.write(data);
+    },
+    read: async () => {
+      const { value } = await reader.read();
+      return value ?? new Uint8Array(0);
+    },
+    close: () => {
+      try {
+        writer.releaseLock();
+      } catch {
+        /* ignore */
+      }
+      try {
+        reader.releaseLock();
+      } catch {
+        /* ignore */
+      }
+      try {
+        conn.close();
+      } catch {
+        /* ignore */
+      }
+    },
+  };
+}
+
 /**
  * ClamAV 扫描器
  *
@@ -170,12 +249,12 @@ export class ClamAVScanner implements VirusScannerInterface {
   }
 
   /**
-   * 检查 ClamAV 是否可用
+   * 检查 ClamAV 是否可用（NUL-tolerant PONG）
    */
   async isAvailable(): Promise<boolean> {
     try {
       const response = await this.sendCommand("PING");
-      return response.trim() === "PONG";
+      return stripClamText(response) === "PONG";
     } catch {
       return false;
     }
@@ -183,19 +262,17 @@ export class ClamAVScanner implements VirusScannerInterface {
 
   /**
    * 扫描文件内容
+   *
+   * 不变量：仅显式 `OK` → safe；`FOUND` → 不安全；其它／异常 → safe=false（禁空响应假安全）。
    */
   async scan(content: Uint8Array, _filename?: string): Promise<ScanResult> {
     const startTime = Date.now();
 
     try {
-      // 使用 INSTREAM 命令发送数据
       const response = await this.scanStream(content);
       const duration = Date.now() - startTime;
-
-      // 解析响应
       const threats = this.parseResponse(response);
 
-      // 计算文件哈希
       const hashBuffer = await crypto.subtle.digest("SHA-256", content.slice());
       const fileHash = Array.from(new Uint8Array(hashBuffer))
         .map((b) => b.toString(16).padStart(2, "0"))
@@ -228,26 +305,21 @@ export class ClamAVScanner implements VirusScannerInterface {
    * 发送命令到 ClamAV
    */
   private async sendCommand(command: string): Promise<string> {
-    // 使用跨运行时 TCP 连接（Deno/Bun/Node）
-    const conn = await connect({
-      host: this.config.host,
-      port: this.config.port,
-    });
-
+    const conn = await openClamTcp(this.config.host, this.config.port);
+    const timer = setTimeout(() => {
+      try {
+        conn.close();
+      } catch {
+        /* ignore */
+      }
+    }, this.config.timeout);
     try {
       const encoder = new TextEncoder();
-      const writer = conn.writable.getWriter();
-      await writer.write(encoder.encode(`z${command}\0`));
-      writer.releaseLock();
-
-      // 读取响应
-      const reader = conn.readable.getReader();
-      const { value } = await reader.read();
-      reader.releaseLock();
-
-      const decoder = new TextDecoder();
-      return decoder.decode(value ?? new Uint8Array(0));
+      await conn.write(encoder.encode(`z${command}\0`));
+      const value = await conn.read(64);
+      return new TextDecoder().decode(value);
     } finally {
+      clearTimeout(timer);
       conn.close();
     }
   }
@@ -256,69 +328,66 @@ export class ClamAVScanner implements VirusScannerInterface {
    * 使用 INSTREAM 命令扫描数据
    */
   private async scanStream(content: Uint8Array): Promise<string> {
-    const conn = await connect({
-      host: this.config.host,
-      port: this.config.port,
-    });
-
+    const conn = await openClamTcp(this.config.host, this.config.port);
+    const timer = setTimeout(() => {
+      try {
+        conn.close();
+      } catch {
+        /* ignore */
+      }
+    }, this.config.timeout);
     try {
       const encoder = new TextEncoder();
-      const writer = conn.writable.getWriter();
+      await conn.write(encoder.encode("zINSTREAM\0"));
 
-      // 发送 INSTREAM 命令
-      await writer.write(encoder.encode("zINSTREAM\0"));
-
-      // 分块发送数据
-      const chunkSize = 2048;
+      // Larger chunks reduce round-trips; clamd accepts up to StreamMaxLength.
+      const chunkSize = 1024 * 1024;
       for (let i = 0; i < content.length; i += chunkSize) {
-        const chunk = content.slice(i, Math.min(i + chunkSize, content.length));
-
-        // 发送长度（4 字节大端序）
+        const chunk = content.subarray(
+          i,
+          Math.min(i + chunkSize, content.length),
+        );
         const lengthBuffer = new ArrayBuffer(4);
-        const view = new DataView(lengthBuffer);
-        view.setUint32(0, chunk.length, false);
-        await writer.write(new Uint8Array(lengthBuffer));
-
-        // 发送数据
-        await writer.write(chunk);
+        new DataView(lengthBuffer).setUint32(0, chunk.length, false);
+        await conn.write(new Uint8Array(lengthBuffer));
+        await conn.write(chunk);
       }
+      await conn.write(new Uint8Array([0, 0, 0, 0]));
 
-      // 发送结束标记（长度为 0）
-      await writer.write(new Uint8Array([0, 0, 0, 0]));
-      writer.releaseLock();
-
-      // 读取响应
-      const reader = conn.readable.getReader();
-      const { value } = await reader.read();
-      reader.releaseLock();
-
-      const decoder = new TextDecoder();
-      return decoder.decode(value ?? new Uint8Array(0));
+      const value = await conn.read(512);
+      return new TextDecoder().decode(value);
     } finally {
+      clearTimeout(timer);
       conn.close();
     }
   }
 
   /**
-   * 解析 ClamAV 响应
+   * 解析 ClamAV 响应。空／未知回复抛错（由 scan 记为 unsafe），避免假安全。
    */
   private parseResponse(response: string): string[] {
+    const text = stripClamText(response);
+    if (!text) {
+      throw new Error("empty clamd reply");
+    }
     const threats: string[] = [];
-
-    // 响应格式: stream: <virus_name> FOUND 或 stream: OK
-    const lines = response.split("\n");
+    const lines = text.split("\n");
+    let sawOk = false;
     for (const line of lines) {
       const trimmed = line.trim();
-      if (trimmed.endsWith("FOUND")) {
-        // 提取病毒名称
-        const match = trimmed.match(/:\s*(.+)\s+FOUND$/);
-        if (match) {
-          threats.push(match[1].trim());
-        }
+      if (!trimmed) continue;
+      if (/FOUND$/i.test(trimmed) || /\bFOUND\b/i.test(trimmed)) {
+        const match = trimmed.match(/:\s*(.+)\s+FOUND$/i);
+        threats.push(match ? match[1].trim() : trimmed);
+        continue;
+      }
+      if (/OK$/i.test(trimmed)) {
+        sawOk = true;
       }
     }
-
-    return threats;
+    if (threats.length > 0) return threats;
+    if (sawOk) return [];
+    throw new Error(`unexpected clamd reply: ${text.slice(0, 120)}`);
   }
 }
 

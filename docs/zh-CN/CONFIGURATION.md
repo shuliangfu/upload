@@ -1,4 +1,4 @@
-# @dreamer/upload 配置说明（2.0.0）
+# @dreamer/upload 配置说明（2.0.1）
 
 **默认即安全。** 生产请保持安全相关默认；逃生开关仅用于
 **本地／开发／测试**，除非你完全清楚风险。
@@ -63,10 +63,23 @@ new MultipartUploadHandler({ storage, requireAuth: false });
 | `verifyContentHeadBytes`     | `number`                                   | **`65536`**                    | 二次校验 Range 字节                | 加大＝更严／更耗内存               |
 | `onEvent`                    | `(UploadServerEvent) => void`              | —                              | 可观测；钩子异常吞掉               |                                    |
 | `forbiddenExtensions`        | `string[]`                                 | `DEFAULT_FORBIDDEN_EXTENSIONS` | 禁止扩展名                         | 收窄危险                           |
+| `virusScan`                  | `false \| VirusScanOptions`               | **关**（`false`／省略）        | complete 可选 ClamAV（或注入）杀毒 | 需 `enable:true`；全量下载；失败→删对象+422 |
 
 错误 JSON 含稳定
 `code`（`UploadErrorCode`：`UNAUTHORIZED`、`FORBIDDEN`、`CONTENT_REJECTED`、`ABORTED`
 等）。
+
+complete 可选杀毒（默认关）：
+
+```ts
+new MultipartUploadHandler({
+  storage,
+  authenticate,
+  virusScan: { enable: true }, // ClamAV @ 127.0.0.1:3310；required=true
+  // virusScan: { enable: true, required: false, host, port, scanner },
+});
+```
+
 
 ---
 
@@ -119,7 +132,7 @@ new MultipartUploadHandler({ storage, requireAuth: false });
 | 项                                   | 状态                                         |
 | ------------------------------------ | -------------------------------------------- |
 | 仅验头 vs 超过 64KiB 的深层 polyglot | 残留；可加大 `verifyContentHeadBytes` 或全量 |
-| 真杀毒／加壳样本                     | HOLD — 非本包目标；仅有启发式                |
+| 真杀毒／加壳样本                     | 可选 `virusScan`（ClamAV，**默认关**）；深层加壳仍残留；默认可走启发式 |
 | Zip 解压／zip-slip                   | 本包无解压入口                               |
 | `defaultOverwrite: true`             | 兼容默认；生产 API 宜显式 `overwrite: false` |
 | GCS／Azure 适配器                    | HOLD — 无凭证／无实现                        |

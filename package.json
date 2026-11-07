@@ -1,6 +1,6 @@
 {
   "name": "@dreamer/upload",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "File upload, multipart, resumable upload and scanner for Deno/Bun/Node.",
   "type": "module",
   "exports": {

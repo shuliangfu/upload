@@ -167,9 +167,11 @@ describe("smoke 1.2 scanner／resumable／perf", () => {
     await mkdir(base, { recursive: true });
     const storage = createLocalCloudStorageAdapter({ baseDir: base });
     const events: string[] = [];
+    // Happy-path TTL must outlive init→chunk→complete disk I/O.
+    // Windows Node CI flaked with 50ms (session expired → complete 404).
     const handler = new MultipartUploadHandler({
       storage,
-      sessionTtlMs: 50,
+      sessionTtlMs: 60_000,
       sessionCleanupIntervalMs: 0,
       verifyContentHeadBytes: 1024,
       onEvent: (e) => events.push(e.type),
@@ -258,8 +260,9 @@ describe("smoke 1.2 scanner／resumable／perf", () => {
       }),
     );
     expect(i2.status).toBe(200);
-    await new Promise((r) => setTimeout(r, 20));
-    const cleaned = short.cleanupExpiredSessions();
+    // Deterministic expiry: pass a future "now" instead of sleeping
+    // (avoids Windows timer / scheduling flakes).
+    const cleaned = short.cleanupExpiredSessions(Date.now() + 1000);
     expect(cleaned).toBeGreaterThanOrEqual(1);
     short.dispose();
     handler.dispose();

@@ -598,11 +598,17 @@ const subdir = generateDateSubdir(); // "2026/01/30"
   `@dreamer/runtime-adapter`。
 - **S3 分片大小**：除最后一片外通常 ≥ 5MB（S3／MinIO）。
 - **非存储平台**：对象生命周期／CDN／桶策略属 `@dreamer/storage` 或云控制台。
-- **边界**：不替代真杀毒；本包无 zip 解压入口。
+- **边界**：可选 `virusScan`（ClamAV，**默认关**）接 complete；启发式仍在；本包无 zip 解压入口。
 
 ---
 
 ## 变更日志
+
+### [2.0.1] - 2026-11-07 — 可选 virusScan
+
+- complete 可选 `virusScan`（ClamAV；**默认关**；失败→删对象＋422）。
+- ClamAVScanner：优先 Deno.connect；禁空回复假安全。
+- Windows Node CI smoke TTL flake 修。
 
 ### [2.0.0] - 2026-11-05 — 安全＋性能（major）
 

@@ -1,4 +1,4 @@
-# @dreamer/upload configuration (2.0.0)
+# @dreamer/upload configuration (2.0.1)
 
 **Secure-by-default.** Prefer leaving security toggles at their defaults. Escape
 hatches are for **local/dev/tests only** unless you fully understand the risk.
@@ -63,9 +63,22 @@ new MultipartUploadHandler({ storage, requireAuth: false });
 | `verifyContentHeadBytes`     | `number`                                   | **`65536`**                    | Range bytes for verify                                   | Raise for stricter/full; lowers memory win |
 | `onEvent`                    | `(UploadServerEvent) => void`              | —                              | Observability; errors swallowed                          |                                            |
 | `forbiddenExtensions`        | `string[]`                                 | `DEFAULT_FORBIDDEN_EXTENSIONS` | Extra/override list                                      | Narrowing is dangerous                     |
+| `virusScan`                  | `false \| VirusScanOptions`               | **off** (`false`/omit)         | Optional ClamAV (or inject) scan on **complete**         | Opt-in; `enable:true` required; full download; fail → delete+422 |
 
 JSON errors include stable `code` (`UploadErrorCode`: `UNAUTHORIZED`,
 `FORBIDDEN`, `CONTENT_REJECTED`, `ABORTED`, …).
+
+Optional complete-path virus scan (default off):
+
+```ts
+new MultipartUploadHandler({
+  storage,
+  authenticate,
+  virusScan: { enable: true }, // ClamAV @ 127.0.0.1:3310; required=true
+  // virusScan: { enable: true, required: false, host, port, scanner },
+});
+```
+
 
 ---
 
@@ -118,7 +131,7 @@ Multipart complete **appends parts in order** (peak ≈ one part). Optional
 | Item                                                 | Status                                                              |
 | ---------------------------------------------------- | ------------------------------------------------------------------- |
 | Head-only verify vs full-object polyglot past 64 KiB | Residual; raise `verifyContentHeadBytes` or full download if needed |
-| Real AV / packed malware                             | HOLD — not in scope; heuristics only                                |
+| Real AV / packed malware                             | Optional `virusScan` (ClamAV, default **off**); deep packers still residual; heuristics remain default path |
 | Zip unpack / zip-slip                                | No unpack entry in this package                                     |
 | `defaultOverwrite: true`                             | Compat default; prefer explicit `overwrite: false` in prod APIs     |
 | GCS / Azure adapters                                 | HOLD — no credentials/impl in-tree                                  |

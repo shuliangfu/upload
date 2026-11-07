@@ -611,10 +611,16 @@ Bypass matrix: [docs/en-US/BYPASS_MATRIX.md](./docs/en-US/BYPASS_MATRIX.md).
 - **S3 part size**: non-final parts usually ≥ 5MB on S3/MinIO.
 - **Not a storage platform**: object lifecycle / CDN / bucket IAM belong in
   `@dreamer/storage` or your cloud console.
-- **Limits**: not a replacement for real AV; no zip unpack entry in this
-  package.
+- **Limits**: optional `virusScan` (ClamAV, **default off**) on complete;
+  heuristics remain; no zip unpack entry in this package.
 
 ## Changelog
+
+### [2.0.1] - 2026-11-07 — optional virusScan
+
+- Optional `virusScan` on complete (ClamAV; **default off**; fail → delete + 422).
+- ClamAVScanner: Deno.connect preference, no false-safe empty replies.
+- Windows Node CI smoke TTL flake fix.
 
 ### [2.0.0] - 2026-11-05 — security + performance (major)
 

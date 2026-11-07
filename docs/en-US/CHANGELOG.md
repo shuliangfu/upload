@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [2.0.1] - 2026-11-07
+
+### Added
+
+- Optional **`virusScan`** on `MultipartUploadHandler` (default **off**).
+  - `false` / omit → no scan
+  - `{ enable: true, … }` → on **complete**, full-object download → scanner;
+    unsafe / required-unavailable → delete object + **422** `CONTENT_REJECTED`
+  - Options: `required` (default true), `host`/`port`/`timeout` for ClamAV,
+    `scanner` inject for tests/custom engines
+- `VirusScanOptions` exported from `@dreamer/upload/server`
+
+### Fixed
+
+- **ClamAVScanner**: prefer `Deno.connect` when present (NUL-tolerant PONG /
+  INSTREAM); empty / unexpected clamd replies no longer report false-safe;
+  larger INSTREAM chunks; connection timeout via `config.timeout`
+- **smoke TTL flake** (Windows Node CI): happy-path `sessionTtlMs` 50→60_000;
+  cleanup test uses deterministic `cleanupExpiredSessions(now)` instead of sleep;
+  chunk handler slides session expiry on activity
+
+### Docs
+
+- CONFIGURATION / BYPASS_MATRIX / README: document optional ClamAV `virusScan`
+  (still opt-in; heuristics remain the default path)
+
+---
+
 ## [2.0.0] - 2026-11-05
 
 ### BREAKING

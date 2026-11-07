@@ -1,6 +1,6 @@
 {
   "name": "@dreamer/upload",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "exports": {
     ".": "./src/mod.ts",
     "./adapters": "./src/adapters/mod.ts",

@@ -7,6 +7,32 @@
 
 ---
 
+## [2.0.1] - 2026-11-07
+
+### 新增
+
+- `MultipartUploadHandler` 可选 **`virusScan`**（**默认关**）。
+  - `false`／省略 → 不扫
+  - `{ enable: true, … }` → **complete** 全量 download → 扫描；
+    不通过／required 且引擎不可用 → 删对象＋**422** `CONTENT_REJECTED`
+  - 选项：`required`（默认 true）、`host`／`port`／`timeout`（ClamAV）、
+    `scanner` 注入（单测／自定义）
+- `@dreamer/upload/server` 导出 `VirusScanOptions`
+
+### 修复
+
+- **ClamAVScanner**：有 Deno 时优先 `Deno.connect`（NUL 容忍 PONG／INSTREAM）；
+  空／异常 clamd 回复不再假安全；更大 INSTREAM 分块；`timeout` 关连接
+- **smoke TTL flake**（Windows Node CI）：happy-path `sessionTtlMs` 50→60_000；
+  cleanup 用确定性 `cleanupExpiredSessions(now)` 替代 sleep；
+  chunk 活动滑动延长会话过期
+
+### 文档
+
+- CONFIGURATION／BYPASS_MATRIX／README：说明可选 ClamAV `virusScan`（仍 opt-in）
+
+---
+
 ## [2.0.0] - 2026-11-05
 
 ### BREAKING

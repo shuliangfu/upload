@@ -1,4 +1,4 @@
-# @dreamer/upload 绕过矩阵（2.0.0 安全加硬）
+# @dreamer/upload 绕过矩阵（2.0.1）
 
 夹具均为**无害假载荷**（截断头／字符串标记），非真实恶意软件。
 
@@ -23,7 +23,7 @@
 | 危险 ACL `public-read-write`                       | 直接透传                                      | 是                     | 已堵：`assertSafeAcl` 默认拒                                                     | ACL 测试                         |
 | 500 回显绝对路径                                   | `error.message` 原文                          | 是                     | 已堵：`redactErrorMessage` + 通用 500                                            | redact 测试                      |
 | zip-slip／zip bomb                                 | **本包无解压入口**                            | 不适用                 | 确认无 unzip／inflate 写盘；HOLD 若未来加解压必补                                | 源码扫描（无命中）               |
-| 真杀毒／深层 polyglot／加密壳                      | 无                                            | 部分                   | **未堵**（非目标）；文档标明启发式边界                                           | —                                |
+| 真杀毒／深层 polyglot／加密壳                      | 可选 `virusScan`（ClamAV）                    | 部分                   | **opt-in**（complete，`enable:true`）；默认关；深层加壳仍残留；启发式仍在        | virus-scan + CONFIGURATION       |
 | complete 二次校验仅拉对象头（默认 64KiB）          | 全量 download                                 | 头之后载荷可逃浅层扫描 | **有意权衡**：可加大 `verifyContentHeadBytes`／全量；默认覆盖魔数+8KiB+PDF MZ 窗 | smoke + security                 |
 | `verifyContentAfterComplete: false`                | 可关                                          | 是                     | 逃生；**仅测**；见 CONFIGURATION 置顶                                            | CONFIGURATION                    |
 | `requireAuth: false`                               | 可关                                          | 是                     | 逃生；**仅测／本地**                                                             | CONFIGURATION                    |

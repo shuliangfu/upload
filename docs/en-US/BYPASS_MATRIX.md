@@ -1,4 +1,4 @@
-# @dreamer/upload bypass matrix (2.0.0 hardening)
+# @dreamer/upload bypass matrix (2.0.1)
 
 Fixtures are **harmless stand-ins** (truncated headers / string markers), not
 real malware.
@@ -24,7 +24,7 @@ real malware.
 | Dangerous ACL `public-read-write`                              | Passed through                   | Yes                                       | Closed: `assertSafeAcl` denies by default                                                                           | ACL tests                        |
 | 500 leaks absolute paths                                       | Raw `error.message`              | Yes                                       | Closed: `redactErrorMessage` + generic 500                                                                          | redact tests                     |
 | zip-slip / zip bomb                                            | **No unpack entry**              | N/A                                       | Confirmed no unzip/inflate write; HOLD if unpack added later                                                        | source scan                      |
-| Real AV / deep polyglot / packers                              | None                             | Partial                                   | **Not closed** (out of scope); heuristics documented                                                                | —                                |
+| Real AV / deep polyglot / packers                              | Optional `virusScan` (ClamAV)    | Partial                                   | **Opt-in** on complete (`enable:true`); default off; packers/deep polyglot still residual; heuristics remain        | virus-scan + CONFIGURATION       |
 | Complete verify reads object **head only** (default 64 KiB)    | Full download                    | Payload after head may evade shallow scan | **Deliberate tradeoff**: raise `verifyContentHeadBytes` / full object; default covers magic + 8 KiB + PDF MZ window | smoke + security                 |
 | `verifyContentAfterComplete: false`                            | Switchable                       | Yes                                       | Escape hatch — **tests only**; see CONFIGURATION                                                                    | CONFIGURATION                    |
 | `requireAuth: false`                                           | Switchable                       | Yes                                       | Escape — **local/dev/tests only**                                                                                   | CONFIGURATION                    |

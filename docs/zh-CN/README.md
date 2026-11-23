@@ -598,11 +598,18 @@ const subdir = generateDateSubdir(); // "2026/01/30"
   `@dreamer/runtime-adapter`。
 - **S3 分片大小**：除最后一片外通常 ≥ 5MB（S3／MinIO）。
 - **非存储平台**：对象生命周期／CDN／桶策略属 `@dreamer/storage` 或云控制台。
-- **边界**：可选 `virusScan`（ClamAV，**默认关**）接 complete；启发式仍在；本包无 zip 解压入口。
+- **边界**：可选 `virusScan`（ClamAV，**默认关**）接
+  complete；启发式仍在；本包无 zip 解压入口。
 
 ---
 
 ## 变更日志
+
+### [2.0.2] - 2026-11-23 — 路径牢笼 realpath
+
+- `resolveSafePath` 对牢笼做 realpath，符号链接不能逃出根目录。
+- 依赖：`@dreamer/runtime-adapter` ^1.2.3、`@dreamer/i18n` ^1.1.3、
+  `@dreamer/test` ^1.2.5。
 
 ### [2.0.1] - 2026-11-07 — 可选 virusScan
 

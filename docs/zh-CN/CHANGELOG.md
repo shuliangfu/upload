@@ -9,6 +9,10 @@
 
 ## [Unreleased]
 
+---
+
+## [2.0.2] - 2026-11-23
+
 ### 安全
 
 - `resolveSafePath` 在词法检查之后对 baseDir 与结果做

@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+---
+
+## [2.0.2] - 2026-11-23
+
 ### Security
 
 - `resolveSafePath` now realpaths the base directory and the result after the

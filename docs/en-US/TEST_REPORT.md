@@ -2,10 +2,10 @@
 
 ## Test overview
 
-- **Test package version**: @dreamer/test@^1.2.3
+- **Test package version**: @dreamer/test@^1.2.5
 - **Test framework**: @dreamer/test, Deno built-in test, Bun test, Node tsx
   --test
-- **Test date**: 2026-07-23
+- **Test date**: 2026-11-23
 - **Test environment**:
   - Deno 2.9+
   - Bun 1.3+
@@ -17,19 +17,17 @@
 
 ### Summary
 
-- **Total tests**: 115 (Deno) / 105 (Bun) / 105 (Node)
-- **Passed**: 115 / 105 / 105 ✅
+- **Total tests**: 154 (Deno) / 138 (Bun) / 138 (Node)
+- **Passed**: 154 / 138 / 138 ✅
 - **Failed**: 0
 - **Pass rate**: 100% ✅
-- **Execution time**: Deno ~0.5s / Bun ~0.07s / Node ~0.35s
+- **Execution time**: Deno ~0.9s / Bun ~0.12s / Node ~0.45s
 
 ### Three-runtime summary
 
-All three runtimes pass. Deno counts 115 (includes 10
-`@dreamer/test cleanup
-browsers` injected by the Deno runner, one per test
-file); Bun and Node each count 105. Cloud adapter tests (S3/OSS/COS/multipart)
-skip gracefully when MinIO is unavailable (e.g. CI).
+All three runtimes pass. Deno counts 154 (includes lifecycle hooks injected by
+the Deno runner); Bun and Node each count 138. Cloud adapter tests
+(S3/OSS/COS/multipart) skip gracefully when MinIO is unavailable (e.g. CI).
 
 ### Test files
 

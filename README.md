@@ -616,9 +616,16 @@ Bypass matrix: [docs/en-US/BYPASS_MATRIX.md](./docs/en-US/BYPASS_MATRIX.md).
 
 ## Changelog
 
+### [2.0.2] - 2026-11-23 — path-cage realpath
+
+- `resolveSafePath` realpaths the cage so symlinks cannot escape the base dir.
+- Dependencies: `@dreamer/runtime-adapter` ^1.2.3, `@dreamer/i18n` ^1.1.3,
+  `@dreamer/test` ^1.2.5.
+
 ### [2.0.1] - 2026-11-07 — optional virusScan
 
-- Optional `virusScan` on complete (ClamAV; **default off**; fail → delete + 422).
+- Optional `virusScan` on complete (ClamAV; **default off**; fail → delete +
+  422).
 - ClamAVScanner: Deno.connect preference, no false-safe empty replies.
 - Windows Node CI smoke TTL flake fix.
 

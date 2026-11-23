@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased]
+
+### Security
+
+- `resolveSafePath` now realpaths the base directory and the result after the
+  lexical check (walking up existing prefixes when a segment is missing).
+  Symlinks that escape the cage throw.
+
+### Changed
+
+- Dependencies: `@dreamer/runtime-adapter` `^1.2.2` → `^1.2.3`, `@dreamer/i18n`
+  `^1.1.2` → `^1.1.3`, `@dreamer/test` `^1.2.3` → `^1.2.5`.
+
 ## [2.0.1] - 2026-11-07
 
 ### Added
@@ -25,8 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   INSTREAM); empty / unexpected clamd replies no longer report false-safe;
   larger INSTREAM chunks; connection timeout via `config.timeout`
 - **smoke TTL flake** (Windows Node CI): happy-path `sessionTtlMs` 50→60_000;
-  cleanup test uses deterministic `cleanupExpiredSessions(now)` instead of sleep;
-  chunk handler slides session expiry on activity
+  cleanup test uses deterministic `cleanupExpiredSessions(now)` instead of
+  sleep; chunk handler slides session expiry on activity
 
 ### Docs
 

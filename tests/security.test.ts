@@ -5,8 +5,14 @@
  */
 
 import { afterAll, beforeAll, describe, expect, it } from "@dreamer/test";
-import { makeTempDir, mkdir, remove } from "@dreamer/runtime-adapter";
-import { join, resolve } from "@dreamer/runtime-adapter";
+import {
+  makeTempDir,
+  mkdir,
+  remove,
+  symlink,
+  writeTextFile,
+} from "@dreamer/runtime-adapter";
+import { join, realPathSync, resolve } from "@dreamer/runtime-adapter";
 import {
   createLocalCloudStorageAdapter,
   LocalCloudStorageAdapter,
@@ -125,8 +131,22 @@ describe("@dreamer/upload security", () => {
       const norm = (p: string) =>
         p.replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
       const safe = norm(resolveSafePath(TMP, "a/b.txt"));
-      const base = norm(resolve(TMP));
+      const base = norm(realPathSync(resolve(TMP)));
       expect(safe === base || safe.startsWith(base + "/")).toBe(true);
+    });
+
+    it("resolveSafePath 拒绝指向 baseDir 外的符号链接", async () => {
+      const outside = await makeTempDir({ prefix: "upload-sec-out-" });
+      await writeTextFile(join(outside, "secret.txt"), "nope");
+      const link = join(TMP, "escape-link");
+      try {
+        await symlink(outside, link);
+      } catch {
+        await remove(outside, { recursive: true });
+        return;
+      }
+      expect(() => resolveSafePath(TMP, "escape-link/secret.txt")).toThrow();
+      await remove(outside, { recursive: true });
     });
 
     it("LocalCloud 拒绝 key 穿越与非 UUID staging", async () => {

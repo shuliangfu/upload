@@ -10,7 +10,13 @@ import {
   DEFAULT_FORBIDDEN_MIME_TYPES,
   MIME_TYPES,
 } from "./constants.ts";
-import { resolve } from "@dreamer/runtime-adapter";
+import {
+  basename,
+  dirname,
+  join,
+  realPathSync,
+  resolve,
+} from "@dreamer/runtime-adapter";
 import type {
   FileValidationInput,
   FileValidationOptions,
@@ -839,13 +845,45 @@ export function sanitizeObjectKey(key: string): string {
 /**
  * 在 baseDir 牢笼内 resolve 相对键；越界抛错。
  *
- * 不变量：返回值 === resolve(baseDir, key) 且必须以 resolve(baseDir) 为前缀
- * （目录边界用尾 `/`，避免 `/uploads` 匹配 `/uploads-evil`）。
+ * 不变量：在 lexical 检查后对 baseDir 与结果做 realpath（缺失段向上解析），
+ * 必须以 canonical baseDir 为前缀（目录边界用尾 `/`，避免 `/uploads` 匹配 `/uploads-evil`）。
+ * 符号链接若逃出 baseDir 会抛错。
  *
  * @param baseDir - 根目录
  * @param relativeKey - 相对键（不得绝对、不得含 `..`）
  * @returns 绝对安全路径
  */
+
+/** realpath；路径尚不存在时向上解析已存在前缀再拼回缺失段。 */
+function realPathWithMissingSegments(absolute: string): string {
+  const resolved = resolve(absolute);
+  try {
+    return realPathSync(resolved);
+  } catch {
+    // 末级或中间目录尚不存在
+  }
+  const tail: string[] = [];
+  let current = resolved;
+  for (let i = 0; i < 1024; i++) {
+    try {
+      let out = realPathSync(current);
+      for (const seg of tail) {
+        out = join(out, seg);
+      }
+      return out;
+    } catch {
+      const parent = dirname(current);
+      const base = basename(current);
+      if (parent === current || !base) {
+        return resolved;
+      }
+      tail.unshift(base);
+      current = parent;
+    }
+  }
+  return resolved;
+}
+
 function normalizePathSep(path: string): string {
   return path.replace(/\\/g, "/");
 }
@@ -854,8 +892,8 @@ export function resolveSafePath(baseDir: string, relativeKey: string): string {
   if (!isPathSafe(relativeKey, baseDir)) {
     throw new Error(`Unsafe path rejected: ${relativeKey}`);
   }
-  const resolvedBase = resolve(baseDir);
-  const resolved = resolve(baseDir, relativeKey);
+  const resolvedBase = realPathWithMissingSegments(resolve(baseDir));
+  const resolved = realPathWithMissingSegments(resolve(baseDir, relativeKey));
   // Windows may yield `\`; cage check must be separator-agnostic.
   const baseNorm = normalizePathSep(resolvedBase).replace(/\/+$/, "");
   const resolvedNorm = normalizePathSep(resolved);
